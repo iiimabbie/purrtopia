@@ -1,11 +1,22 @@
 services:
   discord-bot:
     build: .
-    container_name: discord-bot
+    container_name: purrtopia-discord-bot
     restart: unless-stopped
     environment:
+      - TZ=Asia/Taipei
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - GUILD_ID=${GUILD_ID:-}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=${DB_USER:-heartopia}
+      - DB_PASSWORD=${DB_PASSWORD:-heartopia_secret}
+      - DB_NAME=${DB_NAME:-purrtopia}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    profiles:
+      - prod
     # Alternatively, use env_file:
     # env_file:
     #   - .env
@@ -20,12 +31,44 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: discord-bot-dev
+    container_name: purrtopia-discord-bot-dev
     restart: unless-stopped
     environment:
+      - TZ=Asia/Taipei
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - GUILD_ID=${GUILD_ID:-}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=${DB_USER:-heartopia}
+      - DB_PASSWORD=${DB_PASSWORD:-heartopia_secret}
+      - DB_NAME=${DB_NAME:-purrtopia}
     volumes:
       - .:/app
+    depends_on:
+      mysql:
+        condition: service_healthy
     profiles:
       - dev
+
+  mysql:
+    image: mysql:8.0
+    container_name: purrtopia-mysql
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Taipei
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root_secret}
+      - MYSQL_DATABASE=${DB_NAME:-purrtopia}
+      - MYSQL_USER=${DB_USER:-heartopia}
+      - MYSQL_PASSWORD=${DB_PASSWORD:-heartopia_secret}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql_data:

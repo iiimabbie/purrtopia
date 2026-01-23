@@ -5,6 +5,7 @@ import (
 
 	"discord-bot-template/internal/bot"
 	"discord-bot-template/internal/config"
+	"discord-bot-template/internal/database"
 )
 
 func main() {
@@ -15,6 +16,12 @@ func main() {
 	if cfg.Token == "" {
 		log.Fatal("DISCORD_TOKEN environment variable is required")
 	}
+
+	// db連線
+	if err := database.Connect(&cfg.DB); err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer database.Close()
 
 	// Create bot instance
 	b, err := bot.New(cfg)

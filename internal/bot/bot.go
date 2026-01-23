@@ -123,19 +123,25 @@ func (b *Bot) Start() error {
 }
 
 // registerCommands registers all slash commands with Discord
+// Uses BulkOverwrite to sync commands (adds new, updates existing, removes deleted)
 func (b *Bot) registerCommands() error {
 	definitions := commands.GetDefinitions()
 
-	for _, cmd := range definitions {
-		_, err := b.session.ApplicationCommandCreate(
-			b.session.State.User.ID,
-			b.config.GuildID, // Empty string = global commands
-			cmd,
-		)
-		if err != nil {
-			log.Printf("Failed to register command %s: %v", cmd.Name, err)
-			continue
-		}
+	// 原先沒有先清除舊的command, bot會留存一大堆已註冊過但已刪除的command, 這邊先做清除再重新註冊
+	// BulkOverwrite will:
+	// - Add new commands
+	// - Update existing commands
+	// - Remove commands that are no longer in the list
+	registered, err := b.session.ApplicationCommandBulkOverwrite(
+		b.session.State.User.ID,
+		b.config.GuildID, // Empty string = global commands
+		definitions,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to bulk overwrite commands: %w", err)
+	}
+
+	for _, cmd := range registered {
 		log.Printf("Registered command: /%s", cmd.Name)
 	}
 
