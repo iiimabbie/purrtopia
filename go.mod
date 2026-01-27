@@ -1,4 +1,4 @@
-module discord-bot-template
+module purrtopia
 
 go 1.21
 

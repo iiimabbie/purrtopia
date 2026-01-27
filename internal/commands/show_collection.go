@@ -6,8 +6,8 @@ import (
 	"log"
 	"strings"
 
-	"discord-bot-template/internal/database"
-	"discord-bot-template/internal/embed"
+	"purrtopia/internal/database"
+	"purrtopia/internal/embed"
 
 	"github.com/bwmarrin/discordgo"
 )

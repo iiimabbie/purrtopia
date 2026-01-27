@@ -16,9 +16,9 @@ import (
 	"regexp"
 	"strings"
 
-	"discord-bot-template/internal/component"
-	"discord-bot-template/internal/database"
-	"discord-bot-template/internal/embed"
+	"purrtopia/internal/component"
+	"purrtopia/internal/database"
+	"purrtopia/internal/embed"
 
 	"github.com/bwmarrin/discordgo"
 )

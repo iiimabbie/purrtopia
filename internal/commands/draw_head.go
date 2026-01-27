@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"math/rand"
+	"time"
 
-	"discord-bot-template/internal/database"
-	"discord-bot-template/internal/embed"
+	"purrtopia/internal/database"
+	"purrtopia/internal/embed"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -22,17 +24,20 @@ var drawHeadCommand = &discordgo.ApplicationCommand{
 
 type avatarResult struct {
 	ID              int
-	DiscordID       string
-	DiscordUsername string
+	Type            string
+	DiscordID       sql.NullString
+	DiscordUsername sql.NullString
 	GameUID         string
 	ImageURL        string
 	EmojiID         sql.NullString
 	EmojiName       sql.NullString
+	Weight          int
+	Rarity          string
 }
 
 // /抽頭 command
 func DrawHeadHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	// 隨機從DB抽仇
+	// 隨機從DB抽仇(權重)
 	avatar, err := getRandomAvatar()
 	if err != nil {
 		log.Printf("Failed to get random avatar: %v", err)
@@ -68,17 +73,28 @@ func DrawHeadHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	// 組 response
 	eb := embed.New().
-		Title("🎲 抽到了一顆頭！").
-		Color(embed.ColorBlurple).
-		Thumbnail(avatar.ImageURL).
-		InlineField("Heartopia UID", avatar.GameUID).
-		InlineField("Discord", fmt.Sprintf("<@%s>", avatar.DiscordID))
+    Title("🎲 抽到了一顆頭！").
+    Color(embed.ColorBlurple).
+    Thumbnail(avatar.ImageURL).
+    InlineField("稀有度", avatar.Rarity). // 顯示稀有度
+    InlineField("名稱/UID", avatar.GameUID)
 
-	if emojiStr != "" {
-		eb.Description(fmt.Sprintf("恭喜你抽到了 <@%s> 的頭顱！%s", avatar.DiscordID, emojiStr))
+	var descriptionText string
+
+	// 判斷是玩家還是 NPC 來決定顯示方式
+	if avatar.Type == "NPC" || !avatar.DiscordID.Valid {
+		eb.Description(fmt.Sprintf("恭喜你抽到了 **%s** 的頭顱！(NPC)", avatar.GameUID))
 	} else {
-		eb.Description(fmt.Sprintf("恭喜你抽到了 <@%s> 的頭顱！", avatar.DiscordID))
+		// 是玩家，可以 Ping 他
+		eb.InlineField("Discord", fmt.Sprintf("<@%s>", avatar.DiscordID.String))
+		eb.Description(fmt.Sprintf("恭喜你抽到了 <@%s> 的頭顱！", avatar.DiscordID.String))
 	}
+
+	// 將 emojiStr 加回描述中
+	if emojiStr != "" {
+		descriptionText += " " + emojiStr
+	}
+	eb.Description(descriptionText)
 
 	e := eb.Timestamp().Build()
 
@@ -89,7 +105,7 @@ func DrawHeadHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 	})
 
-	// Record the drawn head
+	// 記錄抽到的頭 (如果是 NPC，drawer_discord_id 依然是觸發指令的人)
 	var drawerID string
 	if i.Member != nil {
 		drawerID = i.Member.User.ID
@@ -103,27 +119,57 @@ func DrawHeadHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 }
 
-// getRandomAvatar 從DB隨機抽頭
+// getRandomAvatar 從DB隨機抽頭 (加權隨機)
 func getRandomAvatar() (*avatarResult, error) {
-	var avatar avatarResult
-	err := database.DB.QueryRow(`
-		SELECT id, discord_id, discord_username, game_uid, image_url, emoji_id, emoji_name
-		FROM user_avatars
-		ORDER BY RAND()
-		LIMIT 1
-	`).Scan(
-		&avatar.ID,
-		&avatar.DiscordID,
-		&avatar.DiscordUsername,
-		&avatar.GameUID,
-		&avatar.ImageURL,
-		&avatar.EmojiID,
-		&avatar.EmojiName,
-	)
-	if err != nil {
-		return nil, err
+    // 1. 撈出所有可以被抽的頭 (包含 USER 和 NPC)
+    rows, err := database.DB.Query(`
+        SELECT id, type, discord_id, discord_username, game_uid, image_url, emoji_id, emoji_name, weight, rarity
+        FROM user_avatars
+    `)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var candidates []*avatarResult
+    var totalWeight int
+
+    // 2. 讀取資料並計算總權重
+    for rows.Next() {
+        var av avatarResult
+        err := rows.Scan(
+            &av.ID, &av.Type, &av.DiscordID, &av.DiscordUsername, 
+            &av.GameUID, &av.ImageURL, &av.EmojiID, &av.EmojiName, 
+            &av.Weight, &av.Rarity,
+        )
+        if err != nil {
+            continue
+        }
+        // 權重 <= 0 就不給抽
+        if av.Weight > 0 {
+            candidates = append(candidates, &av)
+            totalWeight += av.Weight
+        }
+    }
+
+    if len(candidates) == 0 {
+        return nil, sql.ErrNoRows
+    }
+
+    // 3. 隨機擲骰子 (Weighted Random Selection)
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randomValue := r.Intn(totalWeight) // 0 到 totalWeight-1
+
+	currentSum := 0
+	for _, av := range candidates {
+		currentSum += av.Weight
+		if randomValue < currentSum {
+			return av, nil // 命中這個頭
+		}
 	}
-	return &avatar, nil
+
+    // 理論上不會跑到這裡，回傳最後一個當備案
+    return candidates[len(candidates)-1], nil
 }
 
 // 抽到的頭寫入DB

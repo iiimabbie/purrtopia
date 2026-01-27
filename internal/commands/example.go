@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"discord-bot-template/internal/component"
-	"discord-bot-template/internal/embed"
+	"purrtopia/internal/component"
+	"purrtopia/internal/embed"
 
 	"github.com/bwmarrin/discordgo"
 )

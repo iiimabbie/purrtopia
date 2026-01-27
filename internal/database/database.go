@@ -8,7 +8,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
-	"discord-bot-template/internal/config"
+	"purrtopia/internal/config"
 )
 
 // DB is the global database connection

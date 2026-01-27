@@ -9,17 +9,19 @@ func InitSchema() error {
 	schemaAvatars := `
 	CREATE TABLE IF NOT EXISTS user_avatars (
 		id INT AUTO_INCREMENT PRIMARY KEY,
-		discord_id VARCHAR(32) NOT NULL,
-		discord_username VARCHAR(128) NOT NULL,
-		game_uid VARCHAR(64) NOT NULL,
+		type VARCHAR(10) DEFAULT 'USER',            -- 類型
+		discord_id VARCHAR(32) DEFAULT NULL,        -- 允許 NULL
+		discord_username VARCHAR(128) DEFAULT NULL, -- 允許 NULL
+		game_uid VARCHAR(64) NOT NULL,              -- NPC 的名字或 ID
 		image_url TEXT NOT NULL,
 		emoji_id VARCHAR(32) DEFAULT NULL,
 		emoji_name VARCHAR(64) DEFAULT NULL,
+		weight INT DEFAULT 100,                     -- 機率權重
+		rarity VARCHAR(20) DEFAULT 'N',             -- 稀有度顯示
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 		INDEX idx_discord_id (discord_id),
-		INDEX idx_game_uid (game_uid),
-		INDEX idx_emoji_id (emoji_id)
+		INDEX idx_type (type)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 	`
 
