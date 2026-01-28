@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"discord-bot-template/internal/commands"
-	"discord-bot-template/internal/config"
+	"purrtopia/internal/commands"
+	"purrtopia/internal/config"
 
 	"github.com/bwmarrin/discordgo"
 )

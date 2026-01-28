@@ -3,9 +3,10 @@ package main
 import (
 	"log"
 
-	"discord-bot-template/internal/bot"
-	"discord-bot-template/internal/config"
-	"discord-bot-template/internal/database"
+	"purrtopia/internal/auth"
+	"purrtopia/internal/bot"
+	"purrtopia/internal/config"
+	"purrtopia/internal/database"
 )
 
 func main() {
@@ -16,6 +17,9 @@ func main() {
 	if cfg.Token == "" {
 		log.Fatal("DISCORD_TOKEN environment variable is required")
 	}
+
+	// 初始化權限模組
+	auth.Init(cfg)
 
 	// db連線
 	if err := database.Connect(&cfg.DB); err != nil {

@@ -78,13 +78,13 @@ func isServerAdmin(s *discordgo.Session, guildID, userID string) bool {
 
 // CheckPermission 檢查用戶的最高權限等級
 func CheckPermission(s *discordgo.Session, guildID, userID string) Permission {
-	if IsBotOwner(userID) {
+	if isBotOwner(userID) {
 		return PermissionBotOwner
 	}
-	if IsBotAdmin(userID) {
+	if isBotAdmin(userID) {
 		return PermissionBotAdmin
 	}
-	if IsServerAdmin(s, guildID, userID) {
+	if isServerAdmin(s, guildID, userID) {
 		return PermissionServerAdmin
 	}
 	return PermissionNone
