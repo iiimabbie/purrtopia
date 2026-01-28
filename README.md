@@ -22,6 +22,8 @@ discord-bot-template/
 │   └── bot/
 │       └── main.go          # Entry point
 ├── internal/                # 內部套件（僅限本專案使用）
+│   ├── auth/
+│   │   └── permissions.go   # 權限檢查
 │   ├── bot/
 │   │   └── bot.go           # Bot 核心邏輯
 │   ├── commands/
@@ -382,3 +384,40 @@ component.FeedbackModal("feedback", "提交回饋")
 |------|------|------|
 | `DISCORD_TOKEN` | Yes | Discord Bot Token |
 | `GUILD_ID` | No | 測試用伺服器 ID（指令即時更新） |
+| `BOT_OWNER_IDS` | No | Bot 擁有者 Discord ID（逗號分隔） |
+| `BOT_ADMIN_IDS` | No | Bot 管理員 Discord ID（逗號分隔） |
+
+## 權限檢查
+
+使用 `auth` 套件檢查用戶權限：
+
+```go
+import "purrtopia/internal/auth"
+
+// 在 main.go 初始化
+auth.Init(cfg)
+
+// 在 handler 中檢查權限
+func MyHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+    userID := i.Member.User.ID
+
+    // 取得用戶權限等級
+    perm := auth.CheckPermission(s, i.GuildID, userID)
+
+    // 權限等級：Owner > Admin > ServerAdmin > None
+    if perm == auth.PermissionBotOwner {
+        // Bot 擁有者
+    }
+
+    // 檢查是否有指定等級以上的權限
+    if auth.HasPermission(s, i.GuildID, userID, auth.PermissionBotAdmin) {
+        // 有 BotAdmin 或 BotOwner 權限
+    }
+}
+```
+
+權限等級：
+- `PermissionBotOwner` - Bot 擁有者（BOT_OWNER_IDS）
+- `PermissionBotAdmin` - Bot 管理員（BOT_ADMIN_IDS）
+- `PermissionServerAdmin` - 伺服器管理員（Discord Administrator 權限）
+- `PermissionNone` - 無特殊權限
