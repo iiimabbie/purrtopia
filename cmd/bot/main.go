@@ -10,13 +10,8 @@ import (
 )
 
 func main() {
-	// Load configuration
+	// Load configuration (自動驗證 required 欄位)
 	cfg := config.Load()
-
-	// Validate token
-	if cfg.Token == "" {
-		log.Fatal("DISCORD_TOKEN environment variable is required")
-	}
 
 	// 初始化權限模組
 	auth.Init(cfg)

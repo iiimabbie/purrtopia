@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/go-sql-driver/mysql v1.8.1
+	github.com/sethvargo/go-envconfig v1.1.0
 )
 
 require (

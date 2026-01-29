@@ -1,27 +1,29 @@
 package config
 
 import (
+	"context"
 	"fmt"
-	"os"
-	"strings"
+	"log"
+
+	"github.com/sethvargo/go-envconfig"
 )
 
 // Config holds all configuration for the bot
 type Config struct {
-	Token    string
-	GuildID  string   // Optional: for testing commands in specific guild
-	OwnerIDs []string // Bot owner Discord IDs
-	AdminIDs []string // Bot admin Discord IDs
+	Token    string   `env:"DISCORD_TOKEN,required"`
+	GuildID  string   `env:"GUILD_ID"`
+	OwnerIDs []string `env:"BOT_OWNER_IDS"`
+	AdminIDs []string `env:"BOT_ADMIN_IDS"`
 	DB       DBConfig
 }
 
 // DBConfig holds database configuration
 type DBConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	Name     string
+	Host     string `env:"DB_HOST,default=localhost"`
+	Port     string `env:"DB_PORT,default=3306"`
+	User     string `env:"DB_USER,default=purrtopia"`
+	Password string `env:"DB_PASSWORD,default=changeme"`
+	Name     string `env:"DB_NAME,default=purrtopia"`
 }
 
 // DSN returns the MySQL connection string
@@ -32,39 +34,9 @@ func (c *DBConfig) DSN() string {
 
 // Load returns configuration from environment variables
 func Load() *Config {
-	return &Config{
-		Token:    getEnv("DISCORD_TOKEN", ""),
-		GuildID:  getEnv("GUILD_ID", ""), // Leave empty to register global commands
-		OwnerIDs: parseCSV(getEnv("BOT_OWNER_IDS", "")),
-		AdminIDs: parseCSV(getEnv("BOT_ADMIN_IDS", "")),
-		DB: DBConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnv("DB_PORT", "3306"),
-			User:     getEnv("DB_USER", "heartopia"),
-			Password: getEnv("DB_PASSWORD", "heartopia_secret"),
-			Name:     getEnv("DB_NAME", "heartopia"),
-		},
+	var cfg Config
+	if err := envconfig.Process(context.Background(), &cfg); err != nil {
+		log.Fatalf("Failed to load config: %v", err)
 	}
-}
-
-// parseCSV parses a comma-separated string into a slice
-func parseCSV(s string) []string {
-	if s == "" {
-		return nil
-	}
-	parts := strings.Split(s, ",")
-	result := make([]string, 0, len(parts))
-	for _, p := range parts {
-		if trimmed := strings.TrimSpace(p); trimmed != "" {
-			result = append(result, trimmed)
-		}
-	}
-	return result
-}
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
+	return &cfg
 }
