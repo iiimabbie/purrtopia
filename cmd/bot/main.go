@@ -3,10 +3,12 @@ package main
 import (
 	"log"
 
+	"purrtopia/internal/ai"
 	"purrtopia/internal/auth"
 	"purrtopia/internal/bot"
 	"purrtopia/internal/config"
 	"purrtopia/internal/database"
+	"purrtopia/internal/keywords"
 )
 
 func main() {
@@ -15,6 +17,20 @@ func main() {
 
 	// 初始化權限模組
 	auth.Init(cfg)
+
+	// 初始化關鍵字模組
+	keywords.Init(&cfg.Keywords)
+
+	// 初始化 Gemini AI（可選）
+	if cfg.Gemini.APIKey != "" {
+		if err := ai.Init(&cfg.Gemini); err != nil {
+			log.Printf("Warning: Failed to initialize Gemini AI: %v", err)
+		} else {
+			log.Println("Gemini AI initialized successfully")
+		}
+	} else {
+		log.Println("Warning: GEMINI_API_KEY not set, AI features disabled")
+	}
 
 	// db連線
 	if err := database.Connect(&cfg.DB); err != nil {

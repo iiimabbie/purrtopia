@@ -32,6 +32,9 @@ docker compose logs mysql -f        # 只看 mysql
 
 # 查看 logs 最後 N 行
 docker compose logs --tail 50
+
+# 即時監看 
+docker logs -f purrtopia-discord-bot
 ```
 
 ## 重啟/重建

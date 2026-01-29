@@ -7,11 +7,23 @@ services:
       - TZ=Asia/Taipei
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - GUILD_ID=${GUILD_ID:-}
+      - BOT_OWNER_IDS=${BOT_OWNER_IDS:-}
+      - BOT_ADMIN_IDS=${BOT_ADMIN_IDS:-}
       - DB_HOST=mysql
       - DB_PORT=3306
-      - DB_USER=${DB_USER:-heartopia}
-      - DB_PASSWORD=${DB_PASSWORD:-heartopia_secret}
+      - DB_USER=${DB_USER:-purrtopia}
+      - DB_PASSWORD=${DB_PASSWORD:-changeme}
       - DB_NAME=${DB_NAME:-purrtopia}
+      # Gemini AI
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
+      # Keyword Trigger
+      - KEYWORD_TRIGGERS=${KEYWORD_TRIGGERS:-}
+      - CHANNEL_BUBBLE=${CHANNEL_BUBBLE:-}
+      - CHANNEL_DAILY_TOWN=${CHANNEL_DAILY_TOWN:-}
+      - CHANNEL_WEATHER=${CHANNEL_WEATHER:-}
+      - CHANNEL_HELPER=${CHANNEL_HELPER:-}
+      - KEYWORD_ENABLED_CHANNELS=${KEYWORD_ENABLED_CHANNELS:-}
     depends_on:
       mysql:
         condition: service_healthy

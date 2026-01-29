@@ -15,6 +15,24 @@ type Config struct {
 	OwnerIDs []string `env:"BOT_OWNER_IDS"`
 	AdminIDs []string `env:"BOT_ADMIN_IDS"`
 	DB       DBConfig
+	Gemini   GeminiConfig
+	Keywords KeywordConfig
+}
+
+// GeminiConfig holds Gemini AI configuration
+type GeminiConfig struct {
+	APIKey string `env:"GEMINI_API_KEY"`
+	Model  string `env:"GEMINI_MODEL,default=gemini-2.0-flash"`
+}
+
+// KeywordConfig holds keyword trigger configuration
+type KeywordConfig struct {
+	Triggers        []string `env:"KEYWORD_TRIGGERS,default=粉紅,泡泡,粉泡,粉紅泡泡"`
+	BubbleLink      string   `env:"CHANNEL_BUBBLE"`
+	DailyTownLink   string   `env:"CHANNEL_DAILY_TOWN"`
+	WeatherLink     string   `env:"CHANNEL_WEATHER"`
+	HelperLink      string   `env:"CHANNEL_HELPER"`
+	EnabledChannels []string `env:"KEYWORD_ENABLED_CHANNELS"`
 }
 
 // DBConfig holds database configuration

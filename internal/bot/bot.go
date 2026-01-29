@@ -51,6 +51,9 @@ func (b *Bot) registerHandlers() {
 
 	// Interaction (slash command) handler
 	b.session.AddHandler(b.onInteraction)
+
+	// Message handler for keyword-triggered responses
+	b.session.AddHandler(b.onMessageCreate)
 }
 
 // onReady is called when the bot is ready
@@ -99,8 +102,8 @@ func (b *Bot) onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate
 
 // Start starts the bot
 func (b *Bot) Start() error {
-	// Set intents
-	b.session.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages
+	// Set intents (MessageContent is required to read message content)
+	b.session.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentMessageContent
 
 	// Open connection
 	err := b.session.Open()

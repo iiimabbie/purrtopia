@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # Install git for go mod download
 RUN apk add --no-cache git
@@ -9,10 +9,12 @@ WORKDIR /app
 # Copy go mod files first for better caching
 COPY go.mod ./
 COPY go.sum* ./
-RUN go mod download
 
 # Copy source code
 COPY . .
+
+# Download dependencies (will update go.sum if needed)
+RUN go mod tidy
 
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bot ./cmd/bot
