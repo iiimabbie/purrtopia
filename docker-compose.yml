@@ -58,8 +58,8 @@ services:
       - TZ=Asia/Taipei
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root_secret}
       - MYSQL_DATABASE=${DB_NAME:-purrtopia}
-      - MYSQL_USER=${DB_USER:-heartopia}
-      - MYSQL_PASSWORD=${DB_PASSWORD:-heartopia_secret}
+      - MYSQL_USER=${DB_USER:-purrtopia}
+      - MYSQL_PASSWORD=${DB_PASSWORD:-changeme}
     ports:
       - "3306:3306"
     volumes:
@@ -69,6 +69,20 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # 自動備份服務（每天備份，保留 7 天）
+  mysql-backup:
+    image: databack/mysql-backup
+    container_name: purrtopia-mysql-backup
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Taipei
+    command: dump --server=mysql --user=${DB_USER:-purrtopia} --pass=${DB_PASSWORD:-changeme} --include=${DB_NAME:-purrtopia} --target=/db --frequency=1440 --begin=0300 --compression=gzip
+    volumes:
+      - ./backups:/db           # 備份到本機 ./backups 資料夾
+    depends_on:
+      mysql:
+        condition: service_healthy
 
 volumes:
   mysql_data:

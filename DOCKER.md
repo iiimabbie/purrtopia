@@ -94,13 +94,47 @@ docker volume ls
 
 # 查看特定 volume 詳情
 docker volume inspect purrtopia_mysql_data
+```
 
-# 備份 MySQL 資料
+## 備份與還原
+
+### 自動備份
+
+`mysql-backup` 服務會自動：
+- 每天凌晨 3 點備份
+- 備份檔存放在 `./backups/` 資料夾
+- 使用 gzip 壓縮
+
+```bash
+# 查看備份檔
+ls -la ./backups/
+```
+
+### 手動備份
+
+```bash
+# 備份到指定檔案
 docker exec purrtopia-mysql mysqldump -upurrtopia -pchangeme purrtopia > backup.sql
 
-# 還原 MySQL 資料
-docker exec -i purrtopia-mysql mysql -upurrtopia -pchangeme purrtopia < backup.sql
+# 備份並壓縮
+docker exec purrtopia-mysql mysqldump -upurrtopia -pchangeme purrtopia | gzip > backup_$(date +%Y%m%d).sql.gz
 ```
+
+### 還原資料
+
+```bash
+# 從 .sql 檔還原
+docker exec -i purrtopia-mysql mysql -upurrtopia -pchangeme purrtopia < backup.sql
+
+# 從 .sql.gz 壓縮檔還原
+gunzip < ./backups/db_backup_xxxxx.sql.gz | docker exec -i purrtopia-mysql mysql -upurrtopia -pchangeme purrtopia
+```
+
+### 資料不見時
+
+1. 先確認有沒有備份檔：`ls ./backups/`
+2. 找到最新的備份檔
+3. 執行上面的還原指令
 
 ## 常見問題
 

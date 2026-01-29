@@ -49,3 +49,7 @@ logs/
 
 # Air hot reload
 /tmp/
+
+# Backups
+backups/*
+!backups/.gitkeep
