@@ -30,6 +30,9 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /bot .
 
+# Copy game information file
+COPY --from=builder /app/Information.md .
+
 # Run as non-root user
 RUN adduser -D -g '' botuser
 USER botuser

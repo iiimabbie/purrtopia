@@ -62,7 +62,7 @@ func (b *Bot) onReady(s *discordgo.Session, r *discordgo.Ready) {
 	log.Printf("Connected to %d guilds", len(r.Guilds))
 
 	// Set bot status
-	err := s.UpdateGameStatus(0, "/help | Discord Bot Template")
+	err := s.UpdateGameStatus(0, "Heartopia💓")
 	if err != nil {
 		log.Printf("Failed to set status: %v", err)
 	}

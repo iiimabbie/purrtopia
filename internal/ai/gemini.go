@@ -13,9 +13,10 @@ import (
 )
 
 var (
-	client *genai.Client
-	cfg    *config.GeminiConfig
-	once   sync.Once
+	client          *genai.Client
+	cfg             *config.GeminiConfig
+	once            sync.Once
+	gameInformation string
 )
 
 // QuestionResult represents the AI classification result
@@ -47,6 +48,60 @@ func Init(geminiCfg *config.GeminiConfig) error {
 // IsInitialized returns true if the Gemini client is initialized
 func IsInitialized() bool {
 	return client != nil
+}
+
+// SetGameInformation sets the game information for chat responses
+func SetGameInformation(info string) {
+	gameInformation = info
+}
+
+// ChatResponse generates a natural chat response when the bot is mentioned
+func ChatResponse(ctx context.Context, message string) (string, error) {
+	if client == nil {
+		return "", fmt.Errorf("Gemini client not initialized")
+	}
+
+	prompt := buildChatPrompt(message)
+
+	result, err := client.Models.GenerateContent(ctx, cfg.Model, []*genai.Content{
+		{
+			Role:  "user",
+			Parts: []*genai.Part{{Text: prompt}},
+		},
+	}, &genai.GenerateContentConfig{
+		MaxOutputTokens: genai.Ptr[int32](2048),
+		Temperature:     genai.Ptr(float32(0.7)),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to generate content: %w", err)
+	}
+
+	responseText := strings.TrimSpace(result.Text())
+	log.Printf("Chat AI response: %s", responseText)
+	return responseText, nil
+}
+
+func buildChatPrompt(message string) string {
+	return fmt.Sprintf(`你是一個正在玩遊戲的玩家，名叫「Purrtopia」，綽號是「prr」。你熱情友善，喜歡幫助其他玩家，說話輕鬆自然，偶爾會用一些可愛的語氣詞。
+
+以下是你知道的遊戲資訊：
+%s
+
+---
+
+現在有玩家問你：「%s」
+
+請用輕鬆自然的口吻回答，像是一個一起玩遊戲的朋友在聊天。
+- 如果問題跟遊戲有關，根據你知道的資訊回答
+- 如果你不知道答案，就誠實說不確定，可以建議他問問其他玩家或查看公告
+- 回答要簡潔，不要太長（最多 2-3 句話）
+- 不要使用 markdown 格式
+- 可以適當使用表情符號
+- 如果是關於粉紅泡泡(粉泡)、金色泡泡(金泡)相關的問題建議他去: 金色泡泡: https://discord.com/channels/1438429535975641120/1438441906001416292，粉紅泡泡: https://discord.com/channels/1438429535975641120/1438442017414975550
+- 關於螢石、溜溜木、每日任務、小鎮報、事件等每日活動的問題建議他去: https://discord.com/channels/1438429535975641120/1438441735347769445
+- 問「XX在哪裡」「XX要什麼天氣才有」「XX在哪一條河」「XX在哪裡摘」「XX要幾等才有」等位置相關問題建議他去: https://discord.com/channels/1438429535975641120/1452258561156710462
+- weather: 詢問隕石,朵朵在哪裡,特殊天氣,彩虹,雨雪,流星等等特殊天氣問題建議他去: https://discord.com/channels/1438429535975641120/1438747864963747890`
+, gameInformation, message)
 }
 
 // ClassifyQuestion uses Gemini to classify if a message is a question and its type

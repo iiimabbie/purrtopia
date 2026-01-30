@@ -1,5 +1,14 @@
 # Docker 常用指令
 
+## 快速指令表
+
+| 情況 | 指令 |
+|-----|-----|
+| 修改程式碼後部署 | `docker compose --profile prod up -d --build` |
+| 單純重啟（沒改 code） | `docker restart purrtopia-discord-bot` |
+| 只看 log | `docker logs purrtopia-discord-bot --tail 50` |
+| 即時監看 log | `docker logs -f purrtopia-discord-bot` |
+
 ## 啟動/停止
 
 ```bash
@@ -49,6 +58,20 @@ docker compose --profile prod up -d --build
 # 只重建某個服務
 docker compose --profile prod up -d --build discord-bot
 ```
+
+## 部署腳本（推薦）
+
+使用 `deploy.sh` 腳本部署，會自動清理 build cache 避免磁碟空間不足：
+
+```bash
+# 部署 bot（自動清理 + 重建）
+./deploy.sh
+```
+
+腳本內容：
+1. 清理 Docker build cache
+2. 重建並啟動 discord-bot
+3. 顯示最新 log
 
 ## 進入容器
 
@@ -160,4 +183,17 @@ netstat -tlnp | grep 3306
 # 強制重新拉取並建構
 docker compose --profile prod build --no-cache
 docker compose --profile prod up -d
+```
+
+### no space left on device
+```bash
+# 清理 build cache
+docker builder prune -f
+
+# 清理所有未使用資源
+docker system prune -a -f
+
+# 查看磁碟使用量
+df -h /
+docker system df
 ```
