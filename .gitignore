@@ -53,3 +53,7 @@ logs/
 # Backups
 backups/*
 !backups/.gitkeep
+
+# Local documentation (not for git)
+DOCKER.md
+Information.md
