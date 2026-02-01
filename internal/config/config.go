@@ -21,8 +21,13 @@ type Config struct {
 
 // GeminiConfig holds Gemini AI configuration
 type GeminiConfig struct {
-	APIKey string `env:"GEMINI_API_KEY"`
-	Model  string `env:"GEMINI_MODEL,default=gemini-2.0-flash"`
+	APIKey           string `env:"GEMINI_API_KEY"`
+	Model            string `env:"GEMINI_MODEL,default=gemini-2.0-flash"`
+	FallbackEndpoint string `env:"GEMINI_FALLBACK_ENDPOINT"` // OpenAI-compatible endpoint (e.g., https://mingyuuu.zeabur.app/v1)
+	FallbackAPIKey   string `env:"GEMINI_FALLBACK_API_KEY"`
+	FallbackModel    string `env:"GEMINI_FALLBACK_MODEL,default=gemini-2.5-flash"`
+	EnableMention    bool   `env:"AI_ENABLE_MENTION,default=false"`  // Enable @bot mention chat feature
+	EnableClassify   bool   `env:"AI_ENABLE_CLASSIFY,default=false"` // Enable keyword classification feature
 }
 
 // KeywordConfig holds keyword trigger configuration

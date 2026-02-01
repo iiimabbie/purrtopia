@@ -23,11 +23,11 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func init() {
-	RegisterCommand(uploadAvatarCommand, UploadAvatarHandler)
-	RegisterComponent("upload_avatar_btn", UploadAvatarOpenModalHandler)
-	RegisterModal("upload_avatar_modal", UploadAvatarModalSubmitHandler)
-}
+// func init() {
+// 	RegisterCommand(uploadAvatarCommand, UploadAvatarHandler)
+// 	RegisterComponent("upload_avatar_btn", UploadAvatarOpenModalHandler)
+// 	RegisterModal("upload_avatar_modal", UploadAvatarModalSubmitHandler)
+// }
 
 var uploadAvatarCommand = &discordgo.ApplicationCommand{
 	Name:        "上傳頭顱",

@@ -13,9 +13,9 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func init() {
-	RegisterCommand(drawHeadCommand, DrawHeadHandler)
-}
+// func init() {
+// 	RegisterCommand(drawHeadCommand, DrawHeadHandler)
+// }
 
 var drawHeadCommand = &discordgo.ApplicationCommand{
 	Name:        "抽頭",
