@@ -12,9 +12,9 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func init() {
-	RegisterCommand(showCollectionCommand, ShowCollectionHandler)
-}
+// func init() {
+// 	RegisterCommand(showCollectionCommand, ShowCollectionHandler)
+// }
 
 var showCollectionCommand = &discordgo.ApplicationCommand{
 	Name:        "展示",
