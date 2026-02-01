@@ -65,6 +65,78 @@ func InitSchema() error {
 		log.Println("Added emoji columns to user_avatars table")
 	}
 
+	// Snow season proxy buy table (with server region support)
+	schemaProxyBuy := `
+	CREATE TABLE IF NOT EXISTS snow_proxy_buy (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		discord_id VARCHAR(32) NOT NULL,
+		server_region VARCHAR(10) NOT NULL DEFAULT 'asia',
+		items TEXT NOT NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE KEY unique_user_server (discord_id, server_region),
+		INDEX idx_discord_id (discord_id),
+		INDEX idx_server_region (server_region),
+		INDEX idx_created_at (created_at)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+	`
+	_, err = DB.Exec(schemaProxyBuy)
+	if err != nil {
+		return err
+	}
+
+	// Snow season proxy sell table (with server region support)
+	schemaProxySell := `
+	CREATE TABLE IF NOT EXISTS snow_proxy_sell (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		discord_id VARCHAR(32) NOT NULL,
+		server_region VARCHAR(10) NOT NULL DEFAULT 'asia',
+		items TEXT NOT NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE KEY unique_user_server (discord_id, server_region),
+		INDEX idx_discord_id (discord_id),
+		INDEX idx_server_region (server_region),
+		INDEX idx_created_at (created_at)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+	`
+	_, err = DB.Exec(schemaProxySell)
+	if err != nil {
+		return err
+	}
+
+	// Migration: add server_region column if tables already exist without it
+	migrateServerRegion()
+
 	log.Println("Database schema initialized")
 	return nil
+}
+
+// migrateServerRegion adds server_region column to existing tables
+func migrateServerRegion() {
+	tables := []string{"snow_proxy_buy", "snow_proxy_sell"}
+
+	for _, table := range tables {
+		var colExists int
+		err := DB.QueryRow(`
+			SELECT COUNT(*) FROM information_schema.COLUMNS
+			WHERE TABLE_SCHEMA = DATABASE()
+			AND TABLE_NAME = ?
+			AND COLUMN_NAME = 'server_region'
+		`, table).Scan(&colExists)
+
+		if err == nil && colExists == 0 {
+			// Add server_region column
+			_, err := DB.Exec("ALTER TABLE " + table + " ADD COLUMN server_region VARCHAR(10) NOT NULL DEFAULT 'asia' AFTER discord_id")
+			if err != nil {
+				log.Printf("Failed to add server_region to %s: %v", table, err)
+				continue
+			}
+
+			// Drop old unique constraint and add new one
+			DB.Exec("ALTER TABLE " + table + " DROP INDEX discord_id")
+			DB.Exec("ALTER TABLE " + table + " ADD UNIQUE KEY unique_user_server (discord_id, server_region)")
+			DB.Exec("ALTER TABLE " + table + " ADD INDEX idx_server_region (server_region)")
+
+			log.Printf("Added server_region column to %s table", table)
+		}
+	}
 }

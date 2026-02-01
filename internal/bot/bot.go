@@ -10,6 +10,10 @@ import (
 	"purrtopia/internal/commands"
 	"purrtopia/internal/config"
 
+	// Import command subpackages to register their init() functions
+	_ "purrtopia/internal/commands/gacha"
+	_ "purrtopia/internal/commands/snow"
+
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -126,26 +130,68 @@ func (b *Bot) Start() error {
 }
 
 // registerCommands registers all slash commands with Discord
-// Uses BulkOverwrite to sync commands (adds new, updates existing, removes deleted)
+// First clears all existing commands (global + guilds), then registers fresh
 func (b *Bot) registerCommands() error {
 	definitions := commands.GetDefinitions()
 
-	// 原先沒有先清除舊的command, bot會留存一大堆已註冊過但已刪除的command, 這邊先做清除再重新註冊
-	// BulkOverwrite will:
-	// - Add new commands
-	// - Update existing commands
-	// - Remove commands that are no longer in the list
-	registered, err := b.session.ApplicationCommandBulkOverwrite(
-		b.session.State.User.ID,
-		b.config.GuildID, // Empty string = global commands
-		definitions,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to bulk overwrite commands: %w", err)
+	// Step 1: Clear ALL existing commands first (clean slate)
+	log.Println("Clearing all existing commands...")
+
+	// Clear global commands
+	globalCmds, err := b.session.ApplicationCommands(b.session.State.User.ID, "")
+	if err == nil && len(globalCmds) > 0 {
+		log.Printf("Clearing %d global commands...", len(globalCmds))
+		_, err := b.session.ApplicationCommandBulkOverwrite(b.session.State.User.ID, "", []*discordgo.ApplicationCommand{})
+		if err != nil {
+			log.Printf("Warning: failed to clear global commands: %v", err)
+		}
 	}
 
-	for _, cmd := range registered {
-		log.Printf("Registered command: /%s", cmd.Name)
+	// Clear commands from each configured guild
+	for _, guildID := range b.config.GuildIDs {
+		guildCmds, err := b.session.ApplicationCommands(b.session.State.User.ID, guildID)
+		if err == nil && len(guildCmds) > 0 {
+			log.Printf("Clearing %d commands from guild %s...", len(guildCmds), guildID)
+			_, err := b.session.ApplicationCommandBulkOverwrite(b.session.State.User.ID, guildID, []*discordgo.ApplicationCommand{})
+			if err != nil {
+				log.Printf("Warning: failed to clear commands for guild %s: %v", guildID, err)
+			}
+		}
+	}
+
+	log.Println("All commands cleared. Registering new commands...")
+
+	// Step 2: Register commands
+	// If no guild IDs specified, register global commands
+	if len(b.config.GuildIDs) == 0 {
+		registered, err := b.session.ApplicationCommandBulkOverwrite(
+			b.session.State.User.ID,
+			"", // Empty string = global commands
+			definitions,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to register global commands: %w", err)
+		}
+		for _, cmd := range registered {
+			log.Printf("Registered global command: /%s", cmd.Name)
+		}
+		return nil
+	}
+
+	// Register commands for each guild
+	for _, guildID := range b.config.GuildIDs {
+		registered, err := b.session.ApplicationCommandBulkOverwrite(
+			b.session.State.User.ID,
+			guildID,
+			definitions,
+		)
+		if err != nil {
+			log.Printf("Failed to register commands for guild %s: %v", guildID, err)
+			continue
+		}
+		for _, cmd := range registered {
+			log.Printf("Registered command: /%s (guild: %s)", cmd.Name, guildID)
+		}
 	}
 
 	return nil
@@ -170,14 +216,27 @@ func (b *Bot) Stop() error {
 
 // removeCommands removes all registered commands (useful for cleanup)
 func (b *Bot) removeCommands() {
-	cmds, err := b.session.ApplicationCommands(b.session.State.User.ID, b.config.GuildID)
+	// If no guild IDs, remove global commands
+	if len(b.config.GuildIDs) == 0 {
+		b.removeCommandsFromGuild("")
+		return
+	}
+
+	// Remove commands from each guild
+	for _, guildID := range b.config.GuildIDs {
+		b.removeCommandsFromGuild(guildID)
+	}
+}
+
+func (b *Bot) removeCommandsFromGuild(guildID string) {
+	cmds, err := b.session.ApplicationCommands(b.session.State.User.ID, guildID)
 	if err != nil {
 		log.Printf("Failed to get commands: %v", err)
 		return
 	}
 
 	for _, cmd := range cmds {
-		err := b.session.ApplicationCommandDelete(b.session.State.User.ID, b.config.GuildID, cmd.ID)
+		err := b.session.ApplicationCommandDelete(b.session.State.User.ID, guildID, cmd.ID)
 		if err != nil {
 			log.Printf("Failed to delete command %s: %v", cmd.Name, err)
 			continue

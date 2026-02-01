@@ -6,7 +6,7 @@ services:
     environment:
       - TZ=Asia/Taipei
       - DISCORD_TOKEN=${DISCORD_TOKEN}
-      - GUILD_ID=${GUILD_ID:-}
+      - GUILD_IDS=${GUILD_IDS:-}
       - BOT_OWNER_IDS=${BOT_OWNER_IDS:-}
       - BOT_ADMIN_IDS=${BOT_ADMIN_IDS:-}
       - DB_HOST=mysql
@@ -54,7 +54,7 @@ services:
     environment:
       - TZ=Asia/Taipei
       - DISCORD_TOKEN=${DISCORD_TOKEN}
-      - GUILD_ID=${GUILD_ID:-}
+      - GUILD_IDS=${GUILD_IDS:-}
       - BOT_OWNER_IDS=${BOT_OWNER_IDS:-}
       - BOT_ADMIN_IDS=${BOT_ADMIN_IDS:-}
       - DB_HOST=mysql

@@ -1,4 +1,4 @@
-package commands
+package gacha
 
 import (
 	"bytes"
@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"strings"
 
+	"purrtopia/internal/commands"
 	"purrtopia/internal/component"
 	"purrtopia/internal/database"
 	"purrtopia/internal/embed"
@@ -24,9 +25,9 @@ import (
 )
 
 // func init() {
-// 	RegisterCommand(uploadAvatarCommand, UploadAvatarHandler)
-// 	RegisterComponent("upload_avatar_btn", UploadAvatarOpenModalHandler)
-// 	RegisterModal("upload_avatar_modal", UploadAvatarModalSubmitHandler)
+// 	commands.RegisterCommand(uploadAvatarCommand, UploadAvatarHandler)
+// 	commands.RegisterComponent("upload_avatar_btn", UploadAvatarOpenModalHandler)
+// 	commands.RegisterModal("upload_avatar_modal", UploadAvatarModalSubmitHandler)
 // }
 
 var uploadAvatarCommand = &discordgo.ApplicationCommand{
@@ -34,7 +35,7 @@ var uploadAvatarCommand = &discordgo.ApplicationCommand{
 	Description: "上傳你的遊戲頭像圖片",
 }
 
-// /上傳頭顱 command 
+// /上傳頭顱 command
 // TODO: 要做僅管理員? 常駐msg? 反正用戶只要點表單按鈕? 那就要一個專門的頻道
 func UploadAvatarHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	e := embed.New().
@@ -182,7 +183,7 @@ func UploadAvatarModalSubmitHandler(s *discordgo.Session, i *discordgo.Interacti
 		Color(embed.ColorSuccess).
 		Thumbnail(imageURL).
 		InlineField("Heartopia UID", gameUID).
-		InlineField("Discord", fmt.Sprintf("<@%s>", user.ID) + emojiStr).
+		InlineField("Discord", fmt.Sprintf("<@%s>", user.ID)+emojiStr).
 		Footer("感謝捐獻你的頭！", "").
 		Timestamp().
 		Build()
@@ -380,3 +381,6 @@ func saveUserAvatar(discordID, discordUsername, gameUID, imageURL, emojiID, emoj
 
 	return err
 }
+
+// Ensure commands package is imported (for future init registration)
+var _ = commands.RegisterCommand

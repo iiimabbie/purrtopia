@@ -11,7 +11,7 @@ import (
 // Config holds all configuration for the bot
 type Config struct {
 	Token    string   `env:"DISCORD_TOKEN,required"`
-	GuildID  string   `env:"GUILD_ID"`
+	GuildIDs []string `env:"GUILD_IDS"` // Comma-separated guild IDs, empty = global commands
 	OwnerIDs []string `env:"BOT_OWNER_IDS"`
 	AdminIDs []string `env:"BOT_ADMIN_IDS"`
 	DB       DBConfig

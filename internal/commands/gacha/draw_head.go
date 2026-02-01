@@ -1,4 +1,4 @@
-package commands
+package gacha
 
 import (
 	"database/sql"
@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"time"
 
+	"purrtopia/internal/commands"
 	"purrtopia/internal/database"
 	"purrtopia/internal/embed"
 
@@ -14,7 +15,7 @@ import (
 )
 
 // func init() {
-// 	RegisterCommand(drawHeadCommand, DrawHeadHandler)
+// 	commands.RegisterCommand(drawHeadCommand, DrawHeadHandler)
 // }
 
 var drawHeadCommand = &discordgo.ApplicationCommand{
@@ -73,11 +74,11 @@ func DrawHeadHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	// 組 response
 	eb := embed.New().
-    Title("🎲 抽到了一顆頭！").
-    Color(embed.ColorBlurple).
-    Thumbnail(avatar.ImageURL).
-    InlineField("稀有度", avatar.Rarity). // 顯示稀有度
-    InlineField("名稱/UID", avatar.GameUID)
+		Title("🎲 抽到了一顆頭！").
+		Color(embed.ColorBlurple).
+		Thumbnail(avatar.ImageURL).
+		InlineField("稀有度", avatar.Rarity).
+		InlineField("名稱/UID", avatar.GameUID)
 
 	var descriptionText string
 
@@ -121,42 +122,42 @@ func DrawHeadHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 // getRandomAvatar 從DB隨機抽頭 (加權隨機)
 func getRandomAvatar() (*avatarResult, error) {
-    // 1. 撈出所有可以被抽的頭 (包含 USER 和 NPC)
-    rows, err := database.DB.Query(`
+	// 1. 撈出所有可以被抽的頭 (包含 USER 和 NPC)
+	rows, err := database.DB.Query(`
         SELECT id, type, discord_id, discord_username, game_uid, image_url, emoji_id, emoji_name, weight, rarity
         FROM user_avatars
     `)
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-    var candidates []*avatarResult
-    var totalWeight int
+	var candidates []*avatarResult
+	var totalWeight int
 
-    // 2. 讀取資料並計算總權重
-    for rows.Next() {
-        var av avatarResult
-        err := rows.Scan(
-            &av.ID, &av.Type, &av.DiscordID, &av.DiscordUsername, 
-            &av.GameUID, &av.ImageURL, &av.EmojiID, &av.EmojiName, 
-            &av.Weight, &av.Rarity,
-        )
-        if err != nil {
-            continue
-        }
-        // 權重 <= 0 就不給抽
-        if av.Weight > 0 {
-            candidates = append(candidates, &av)
-            totalWeight += av.Weight
-        }
-    }
+	// 2. 讀取資料並計算總權重
+	for rows.Next() {
+		var av avatarResult
+		err := rows.Scan(
+			&av.ID, &av.Type, &av.DiscordID, &av.DiscordUsername,
+			&av.GameUID, &av.ImageURL, &av.EmojiID, &av.EmojiName,
+			&av.Weight, &av.Rarity,
+		)
+		if err != nil {
+			continue
+		}
+		// 權重 <= 0 就不給抽
+		if av.Weight > 0 {
+			candidates = append(candidates, &av)
+			totalWeight += av.Weight
+		}
+	}
 
-    if len(candidates) == 0 {
-        return nil, sql.ErrNoRows
-    }
+	if len(candidates) == 0 {
+		return nil, sql.ErrNoRows
+	}
 
-    // 3. 隨機擲骰子 (Weighted Random Selection)
+	// 3. 隨機擲骰子 (Weighted Random Selection)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomValue := r.Intn(totalWeight) // 0 到 totalWeight-1
 
@@ -168,8 +169,8 @@ func getRandomAvatar() (*avatarResult, error) {
 		}
 	}
 
-    // 理論上不會跑到這裡，回傳最後一個當備案
-    return candidates[len(candidates)-1], nil
+	// 理論上不會跑到這裡，回傳最後一個當備案
+	return candidates[len(candidates)-1], nil
 }
 
 // 抽到的頭寫入DB
@@ -180,3 +181,6 @@ func recordDrawnHead(drawerDiscordID string, avatarID int) error {
 	)
 	return err
 }
+
+// Ensure commands package is imported (for future init registration)
+var _ = commands.RegisterCommand

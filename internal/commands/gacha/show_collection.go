@@ -1,4 +1,4 @@
-package commands
+package gacha
 
 import (
 	"database/sql"
@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 
+	"purrtopia/internal/commands"
 	"purrtopia/internal/database"
 	"purrtopia/internal/embed"
 
@@ -13,7 +14,7 @@ import (
 )
 
 // func init() {
-// 	RegisterCommand(showCollectionCommand, ShowCollectionHandler)
+// 	commands.RegisterCommand(showCollectionCommand, ShowCollectionHandler)
 // }
 
 var showCollectionCommand = &discordgo.ApplicationCommand{
@@ -72,7 +73,7 @@ func ShowCollectionHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 		return
 	}
 
-	// response 含 emoji 
+	// response 含 emoji
 	emojiStr := strings.Join(emojis, "")
 
 	e := embed.New().
@@ -122,3 +123,6 @@ func getDrawnEmojis(discordID string) ([]string, error) {
 
 	return emojis, nil
 }
+
+// Ensure commands package is imported (for future init registration)
+var _ = commands.RegisterCommand
