@@ -1,28 +1,41 @@
 # Purrtopia
 
-Discord Bot for avatar gacha game.
+Discord Bot for Maplestory game community.
 
 ## Features
 
-- `/抽頭` - 隨機抽取頭像（加權機率）
-- `/上傳頭顱` - 上傳遊戲頭像
-- `/展示` - 展示收集到的頭像
-- `/example` - 互動範例（開發用）
+### 冰雪季活動 `/冰雪季`
+- **代購服務** - 登記想購買的冰雪市場道具
+- **代售服務** - 登記想出售的冰雪市場道具
+- **查看列表** - 查詢目前所有代購/代售資料
+- 支援 **亞服** 與 **台港澳服** 分區資料
+
+### 頭像收集（暫停使用）
+- ~~`/抽頭` - 隨機抽取頭像（加權機率）~~
+- ~~`/上傳頭顱` - 上傳遊戲頭像~~
+- ~~`/展示` - 展示收集到的頭像~~
 
 ## Project Structure
 
 ```
 purrtopia/
 ├── cmd/bot/
-│   └── main.go              # Entry point
+│   └── main.go                 # Entry point
 ├── internal/
-│   ├── auth/                # 權限檢查
-│   ├── bot/                 # Bot 核心邏輯
-│   ├── commands/            # 指令處理
-│   ├── component/           # UI 元件 (Button, Select, Modal)
-│   ├── config/              # 設定管理
-│   ├── database/            # 資料庫連線與 Schema
-│   └── embed/               # Embed 訊息建構
+│   ├── auth/                   # 權限檢查
+│   ├── bot/                    # Bot 核心邏輯
+│   ├── commands/               # 指令處理
+│   │   ├── commands.go         # 指令註冊
+│   │   ├── gacha/              # 頭像收集相關（暫停）
+│   │   │   ├── draw_head.go
+│   │   │   ├── show_collection.go
+│   │   │   └── upload_avatar.go
+│   │   └── snow/               # 冰雪季活動
+│   │       └── snow_season.go
+│   ├── component/              # UI 元件 (Button, Select, Modal)
+│   ├── config/                 # 設定管理
+│   ├── database/               # 資料庫連線與 Schema
+│   └── embed/                  # Embed 訊息建構
 ├── docker-compose.yml
 ├── Dockerfile
 └── Dockerfile.dev
@@ -53,7 +66,7 @@ docker compose down
 | 變數 | 必填 | 說明 |
 |------|------|------|
 | `DISCORD_TOKEN` | Yes | Discord Bot Token |
-| `GUILD_ID` | No | 測試用伺服器 ID |
+| `GUILD_IDS` | No | 伺服器 ID（逗號分隔，支援多伺服器） |
 | `BOT_OWNER_IDS` | No | Bot 擁有者 ID（逗號分隔） |
 | `BOT_ADMIN_IDS` | No | Bot 管理員 ID（逗號分隔） |
 | `DB_HOST` | No | 資料庫主機（預設 localhost） |
