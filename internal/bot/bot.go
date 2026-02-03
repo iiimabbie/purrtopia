@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"purrtopia/internal/commands"
@@ -19,11 +20,12 @@ import (
 
 // Bot represents the Discord bot instance
 type Bot struct {
-	session           *discordgo.Session
-	config            *config.Config
-	handlers          map[string]commands.Handler
-	componentHandlers map[string]commands.Handler
-	modalHandlers     map[string]commands.Handler
+	session                 *discordgo.Session
+	config                  *config.Config
+	handlers                map[string]commands.Handler
+	componentHandlers       map[string]commands.Handler
+	componentPrefixHandlers map[string]commands.Handler
+	modalHandlers           map[string]commands.Handler
 }
 
 // New creates a new bot instance
@@ -35,11 +37,12 @@ func New(cfg *config.Config) (*Bot, error) {
 	}
 
 	bot := &Bot{
-		session:           session,
-		config:            cfg,
-		handlers:          commands.GetHandlers(),
-		componentHandlers: commands.GetComponentHandlers(),
-		modalHandlers:     commands.GetModalHandlers(),
+		session:                 session,
+		config:                  cfg,
+		handlers:                commands.GetHandlers(),
+		componentHandlers:       commands.GetComponentHandlers(),
+		componentPrefixHandlers: commands.GetComponentPrefixHandlers(),
+		modalHandlers:           commands.GetModalHandlers(),
 	}
 
 	// Register event handlers
@@ -90,7 +93,18 @@ func (b *Bot) onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate
 		if handler, ok := b.componentHandlers[customID]; ok {
 			handler(s, i)
 		} else {
-			log.Printf("Unknown component: %s", customID)
+			// Try prefix matching
+			found := false
+			for prefix, handler := range b.componentPrefixHandlers {
+				if strings.HasPrefix(customID, prefix) {
+					handler(s, i)
+					found = true
+					break
+				}
+			}
+			if !found {
+				log.Printf("Unknown component: %s", customID)
+			}
 		}
 
 	case discordgo.InteractionModalSubmit:
