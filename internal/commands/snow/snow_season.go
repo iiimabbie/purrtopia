@@ -87,6 +87,22 @@ func init() {
 		commands.RegisterComponent(fmt.Sprintf("snow_proxy_buy_row_select_%s_%s", ServerAsia, col), makeProxyBuyRowSelectHandler(ServerAsia, col))
 		commands.RegisterComponent(fmt.Sprintf("snow_proxy_buy_row_select_%s_%s", ServerTWHKMO, col), makeProxyBuyRowSelectHandler(ServerTWHKMO, col))
 	}
+
+	// Clear registration handlers
+	commands.RegisterComponent("snow_proxy_buy_clear_asia", makeProxyBuyClearHandler(ServerAsia))
+	commands.RegisterComponent("snow_proxy_buy_clear_twhkmo", makeProxyBuyClearHandler(ServerTWHKMO))
+	commands.RegisterComponent("snow_proxy_sell_clear_asia", makeProxySellClearHandler(ServerAsia))
+	commands.RegisterComponent("snow_proxy_sell_clear_twhkmo", makeProxySellClearHandler(ServerTWHKMO))
+
+	// Clear confirmation handlers
+	commands.RegisterComponent("snow_proxy_buy_clear_yes_asia", makeProxyBuyClearConfirmHandler(ServerAsia))
+	commands.RegisterComponent("snow_proxy_buy_clear_yes_twhkmo", makeProxyBuyClearConfirmHandler(ServerTWHKMO))
+	commands.RegisterComponent("snow_proxy_buy_clear_no_asia", makeProxyBuyClearCancelHandler(ServerAsia))
+	commands.RegisterComponent("snow_proxy_buy_clear_no_twhkmo", makeProxyBuyClearCancelHandler(ServerTWHKMO))
+	commands.RegisterComponent("snow_proxy_sell_clear_yes_asia", makeProxySellClearConfirmHandler(ServerAsia))
+	commands.RegisterComponent("snow_proxy_sell_clear_yes_twhkmo", makeProxySellClearConfirmHandler(ServerTWHKMO))
+	commands.RegisterComponent("snow_proxy_sell_clear_no_asia", makeProxySellClearCancelHandler(ServerAsia))
+	commands.RegisterComponent("snow_proxy_sell_clear_no_twhkmo", makeProxySellClearCancelHandler(ServerTWHKMO))
 }
 
 var snowSeasonCommand = &discordgo.ApplicationCommand{
@@ -412,6 +428,7 @@ func buildProxySellSelectMenu(server string) []discordgo.MessageComponent {
 		component.NewActionRow().AddSelect(selectMenu.Build()).Build(),
 		component.NewActionRow().
 			AddButton(component.NewButton().CustomID("snow_back_sell_" + server).Label("⬅️ 返回").Secondary().Build()).
+			AddButton(component.NewButton().CustomID("snow_proxy_sell_clear_" + server).Label("🗑️ 清除登記").Danger().Build()).
 			Build(),
 	}
 }
@@ -683,9 +700,10 @@ func buildProxyBuySelectMenus(server, column string, selectedRows map[int]bool) 
 		}
 	}
 
-	// Row 3: Back button only (save happens automatically when selecting rows)
+	// Row 3: Back button and clear button
 	row3 := component.NewActionRow().
-		AddButton(component.NewButton().CustomID("snow_back_server_" + server).Label("⬅️ 返回選單").Secondary().Build())
+		AddButton(component.NewButton().CustomID("snow_back_server_" + server).Label("⬅️ 返回選單").Secondary().Build()).
+		AddButton(component.NewButton().CustomID("snow_proxy_buy_clear_" + server).Label("🗑️ 清除登記").Danger().Build())
 
 	return []discordgo.MessageComponent{
 		component.NewActionRow().AddSelect(colSelect.Build()).Build(),
@@ -1120,4 +1138,145 @@ func respondWithError(s *discordgo.Session, i *discordgo.InteractionCreate, mess
 			Attachments: &[]*discordgo.MessageAttachment{}, // Clear attachments
 		},
 	})
+}
+
+// ============================================
+// Clear registration handlers
+// ============================================
+
+func buildClearConfirmEmbed(actionType, server string) *discordgo.MessageEmbed {
+	var title string
+	if actionType == "buy" {
+		title = fmt.Sprintf("🗑️ 清除代購登記【%s】", getServerDisplayName(server))
+	} else {
+		title = fmt.Sprintf("🗑️ 清除代售登記【%s】", getServerDisplayName(server))
+	}
+
+	return embed.New().
+		Title(title).
+		Description("資料真的都會不見唷🥺").
+		Color(embed.ColorWarning).
+		Build()
+}
+
+func buildClearConfirmButtons(actionType, server string) []discordgo.MessageComponent {
+	var yesID, noID string
+	if actionType == "buy" {
+		yesID = "snow_proxy_buy_clear_yes_" + server
+		noID = "snow_proxy_buy_clear_no_" + server
+	} else {
+		yesID = "snow_proxy_sell_clear_yes_" + server
+		noID = "snow_proxy_sell_clear_no_" + server
+	}
+
+	return []discordgo.MessageComponent{
+		component.NewActionRow().
+			AddButton(component.NewButton().CustomID(yesID).Label("是").Danger().Build()).
+			AddButton(component.NewButton().CustomID(noID).Label("否").Secondary().Build()).
+			Build(),
+	}
+}
+
+// Show clear confirmation for proxy buy
+func makeProxyBuyClearHandler(server string) commands.Handler {
+	return func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				Embeds:      []*discordgo.MessageEmbed{buildClearConfirmEmbed("buy", server)},
+				Components:  buildClearConfirmButtons("buy", server),
+				Attachments: &[]*discordgo.MessageAttachment{},
+			},
+		})
+	}
+}
+
+// Show clear confirmation for proxy sell
+func makeProxySellClearHandler(server string) commands.Handler {
+	return func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				Embeds:     []*discordgo.MessageEmbed{buildClearConfirmEmbed("sell", server)},
+				Components: buildClearConfirmButtons("sell", server),
+			},
+		})
+	}
+}
+
+// Confirm clear proxy buy - delete data and go back to buy menu
+func makeProxyBuyClearConfirmHandler(server string) commands.Handler {
+	return func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		userID := getUserID(i)
+		if userID == "" {
+			respondWithError(s, i, "無法取得用戶資訊")
+			return
+		}
+
+		// Delete user's proxy buy data for this server
+		_, err := database.DB.Exec(`
+			DELETE FROM snow_proxy_buy
+			WHERE discord_id = ? AND server_region = ? AND created_at >= ?
+		`, userID, server, getLastSaturdayReset())
+		if err != nil {
+			log.Printf("Failed to delete proxy buy: %v", err)
+		}
+
+		// Go back to buy menu
+		showProxyBuyMenu(s, i, server)
+	}
+}
+
+// Cancel clear proxy buy - go back to registration page
+func makeProxyBuyClearCancelHandler(server string) commands.Handler {
+	return func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		userID := getUserID(i)
+		defaultColumn := "A"
+		selectedRows := getUserSelectedRowsForColumn(userID, server, defaultColumn)
+
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				Embeds:      []*discordgo.MessageEmbed{buildProxyBuySelectEmbed(server, defaultColumn)},
+				Components:  buildProxyBuySelectMenus(server, defaultColumn, selectedRows),
+				Attachments: &[]*discordgo.MessageAttachment{},
+			},
+		})
+	}
+}
+
+// Confirm clear proxy sell - delete data and go back to sell menu
+func makeProxySellClearConfirmHandler(server string) commands.Handler {
+	return func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		userID := getUserID(i)
+		if userID == "" {
+			respondWithError(s, i, "無法取得用戶資訊")
+			return
+		}
+
+		// Delete user's proxy sell data for this server
+		_, err := database.DB.Exec(`
+			DELETE FROM snow_proxy_sell
+			WHERE discord_id = ? AND server_region = ? AND created_at >= ?
+		`, userID, server, getLastSaturdayReset())
+		if err != nil {
+			log.Printf("Failed to delete proxy sell: %v", err)
+		}
+
+		// Go back to sell menu
+		showProxySellMenu(s, i, server)
+	}
+}
+
+// Cancel clear proxy sell - go back to registration page
+func makeProxySellClearCancelHandler(server string) commands.Handler {
+	return func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				Embeds:     []*discordgo.MessageEmbed{buildProxySellSelectEmbed(server)},
+				Components: buildProxySellSelectMenu(server),
+			},
+		})
+	}
 }
