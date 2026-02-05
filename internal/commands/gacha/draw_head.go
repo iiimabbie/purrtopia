@@ -1,7 +1,6 @@
 package gacha
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"math/rand"
@@ -9,6 +8,7 @@ import (
 
 	"purrtopia/internal/commands"
 	"purrtopia/internal/database"
+	"purrtopia/internal/database/models"
 	"purrtopia/internal/embed"
 
 	"github.com/bwmarrin/discordgo"
@@ -23,15 +23,16 @@ var drawHeadCommand = &discordgo.ApplicationCommand{
 	Description: "隨機抽取一顆伺服器成員頭顱",
 }
 
+// avatarResult 抽頭結果結構
 type avatarResult struct {
 	ID              int
 	Type            string
-	DiscordID       sql.NullString
-	DiscordUsername sql.NullString
+	DiscordID       *string
+	DiscordUsername *string
 	GameUID         string
 	ImageURL        string
-	EmojiID         sql.NullString
-	EmojiName       sql.NullString
+	EmojiID         *string
+	EmojiName       *string
 	Weight          int
 	Rarity          string
 }
@@ -44,7 +45,7 @@ func DrawHeadHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		log.Printf("Failed to get random avatar: %v", err)
 
 		var description string
-		if err == sql.ErrNoRows {
+		if err.Error() == "no avatars available" {
 			description = "目前還沒有人上傳頭顱！\n使用 `/上傳頭顱` 成為第一個捐獻者吧～"
 		} else {
 			description = "抽取頭顱時發生錯誤，請稍後再試"
@@ -68,8 +69,8 @@ func DrawHeadHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	// 表符
 	var emojiStr string
-	if avatar.EmojiID.Valid && avatar.EmojiName.Valid {
-		emojiStr = fmt.Sprintf("<:%s:%s>", avatar.EmojiName.String, avatar.EmojiID.String)
+	if avatar.EmojiID != nil && avatar.EmojiName != nil {
+		emojiStr = fmt.Sprintf("<:%s:%s>", *avatar.EmojiName, *avatar.EmojiID)
 	}
 
 	// 組 response
@@ -83,12 +84,12 @@ func DrawHeadHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	var descriptionText string
 
 	// 判斷是玩家還是 NPC 來決定顯示方式
-	if avatar.Type == "NPC" || !avatar.DiscordID.Valid {
+	if avatar.Type == "NPC" || avatar.DiscordID == nil {
 		eb.Description(fmt.Sprintf("恭喜你抽到了 **%s** 的頭顱！(NPC)", avatar.GameUID))
 	} else {
 		// 是玩家，可以 Ping 他
-		eb.InlineField("Discord", fmt.Sprintf("<@%s>", avatar.DiscordID.String))
-		eb.Description(fmt.Sprintf("恭喜你抽到了 <@%s> 的頭顱！", avatar.DiscordID.String))
+		eb.InlineField("Discord", fmt.Sprintf("<@%s>", *avatar.DiscordID))
+		eb.Description(fmt.Sprintf("恭喜你抽到了 <@%s> 的頭顱！", *avatar.DiscordID))
 	}
 
 	// 將 emojiStr 加回描述中
@@ -122,42 +123,55 @@ func DrawHeadHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 // getRandomAvatar 從DB隨機抽頭 (加權隨機)
 func getRandomAvatar() (*avatarResult, error) {
-	// 1. 撈出所有可以被抽的頭 (包含 USER 和 NPC)
-	rows, err := database.DB.Query(`
-        SELECT id, type, discord_id, discord_username, game_uid, image_url, emoji_id, emoji_name, weight, rarity
-        FROM user_avatars
-    `)
+	// 使用 GORM Repository 取得所有頭像
+	rows, err := database.AvatarRepo.FindAll()
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	var candidates []*avatarResult
 	var totalWeight int
 
-	// 2. 讀取資料並計算總權重
-	for rows.Next() {
-		var av avatarResult
-		err := rows.Scan(
-			&av.ID, &av.Type, &av.DiscordID, &av.DiscordUsername,
-			&av.GameUID, &av.ImageURL, &av.EmojiID, &av.EmojiName,
-			&av.Weight, &av.Rarity,
-		)
-		if err != nil {
-			continue
+	// 讀取資料並計算總權重
+	for _, row := range rows {
+		weight := row.Weight
+		if weight <= 0 {
+			weight = 100 // default weight
 		}
+		rarity := row.Rarity
+		if rarity == "" {
+			rarity = "N"
+		}
+		avatarType := row.Type
+		if avatarType == "" {
+			avatarType = "USER"
+		}
+
+		av := &avatarResult{
+			ID:              row.ID,
+			Type:            avatarType,
+			DiscordID:       row.DiscordID,
+			DiscordUsername: row.DiscordUsername,
+			GameUID:         row.GameUID,
+			ImageURL:        row.ImageURL,
+			EmojiID:         row.EmojiID,
+			EmojiName:       row.EmojiName,
+			Weight:          weight,
+			Rarity:          rarity,
+		}
+
 		// 權重 <= 0 就不給抽
 		if av.Weight > 0 {
-			candidates = append(candidates, &av)
+			candidates = append(candidates, av)
 			totalWeight += av.Weight
 		}
 	}
 
 	if len(candidates) == 0 {
-		return nil, sql.ErrNoRows
+		return nil, fmt.Errorf("no avatars available")
 	}
 
-	// 3. 隨機擲骰子 (Weighted Random Selection)
+	// 隨機擲骰子 (Weighted Random Selection)
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomValue := r.Intn(totalWeight) // 0 到 totalWeight-1
 
@@ -175,11 +189,10 @@ func getRandomAvatar() (*avatarResult, error) {
 
 // 抽到的頭寫入DB
 func recordDrawnHead(drawerDiscordID string, avatarID int) error {
-	_, err := database.DB.Exec(
-		"INSERT INTO drawn_heads (drawer_discord_id, avatar_id) VALUES (?, ?)",
-		drawerDiscordID, avatarID,
-	)
-	return err
+	return database.DrawnHeadRepo.Create(&models.DrawnHead{
+		DrawerDiscordID: drawerDiscordID,
+		AvatarID:        avatarID,
+	})
 }
 
 // Ensure commands package is imported (for future init registration)

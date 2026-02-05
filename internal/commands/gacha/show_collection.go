@@ -1,7 +1,6 @@
 package gacha
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"strings"
@@ -92,32 +91,18 @@ func ShowCollectionHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 	})
 }
 
-// 取抽過的投的sql
+// 取抽過的頭
 func getDrawnEmojis(discordID string) ([]string, error) {
-	rows, err := database.DB.Query(`
-		SELECT ua.emoji_id, ua.emoji_name, MAX(dh.drawn_at) as last_drawn
-		FROM drawn_heads dh
-		JOIN user_avatars ua ON dh.avatar_id = ua.id
-		WHERE dh.drawer_discord_id = ?
-		AND ua.emoji_id IS NOT NULL
-		AND ua.emoji_name IS NOT NULL
-		GROUP BY ua.emoji_id, ua.emoji_name
-		ORDER BY last_drawn DESC
-	`, discordID)
+	// 使用 GORM Repository
+	rows, err := database.DrawnHeadRepo.FindDrawnEmojisByDiscordID(discordID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	var emojis []string
-	for rows.Next() {
-		var emojiID, emojiName sql.NullString
-		var lastDrawn sql.NullTime
-		if err := rows.Scan(&emojiID, &emojiName, &lastDrawn); err != nil {
-			continue
-		}
-		if emojiID.Valid && emojiName.Valid {
-			emojis = append(emojis, fmt.Sprintf("<:%s:%s>", emojiName.String, emojiID.String))
+	for _, row := range rows {
+		if row.EmojiID != "" && row.EmojiName != "" {
+			emojis = append(emojis, fmt.Sprintf("<:%s:%s>", row.EmojiName, row.EmojiID))
 		}
 	}
 

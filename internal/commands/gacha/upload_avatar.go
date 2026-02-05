@@ -19,6 +19,7 @@ import (
 	"purrtopia/internal/commands"
 	"purrtopia/internal/component"
 	"purrtopia/internal/database"
+	"purrtopia/internal/database/models"
 	"purrtopia/internal/embed"
 
 	"github.com/bwmarrin/discordgo"
@@ -350,36 +351,33 @@ func sanitizeEmojiName(name string) string {
 
 // 把用戶上傳的頭寫入DB
 func saveUserAvatar(discordID, discordUsername, gameUID, imageURL, emojiID, emojiName string) error {
-	// 先檢查是否已有
-	var exists bool
-	var oldEmojiID *string
-	err := database.DB.QueryRow(
-		"SELECT EXISTS(SELECT 1 FROM user_avatars WHERE discord_id = ?)",
-		discordID,
-	).Scan(&exists)
+	// 使用 GORM Repository
+	exists, err := database.AvatarRepo.ExistsByDiscordID(discordID)
 	if err != nil {
 		return err
 	}
 
-	// 如果有的話就拿舊的row更新, 沒有的話就直接 insert
-	if exists {
-		database.DB.QueryRow(
-			"SELECT emoji_id FROM user_avatars WHERE discord_id = ?",
-			discordID,
-		).Scan(&oldEmojiID)
-
-		_, err = database.DB.Exec(
-			"UPDATE user_avatars SET discord_username = ?, game_uid = ?, image_url = ?, emoji_id = ?, emoji_name = ? WHERE discord_id = ?",
-			discordUsername, gameUID, imageURL, emojiID, emojiName, discordID,
-		)
-	} else {
-		_, err = database.DB.Exec(
-			"INSERT INTO user_avatars (discord_id, discord_username, game_uid, image_url, emoji_id, emoji_name) VALUES (?, ?, ?, ?, ?, ?)",
-			discordID, discordUsername, gameUID, imageURL, emojiID, emojiName,
-		)
+	avatar := &models.UserAvatar{
+		DiscordID:       &discordID,
+		DiscordUsername: &discordUsername,
+		GameUID:         gameUID,
+		ImageURL:        imageURL,
+		EmojiID:         &emojiID,
+		EmojiName:       &emojiName,
 	}
 
-	return err
+	if exists {
+		// 更新現有的
+		return database.AvatarRepo.UpdateByDiscordID(discordID, map[string]interface{}{
+			"discord_username": discordUsername,
+			"game_uid":         gameUID,
+			"image_url":        imageURL,
+			"emoji_id":         emojiID,
+			"emoji_name":       emojiName,
+		})
+	}
+	// 新增
+	return database.AvatarRepo.Create(avatar)
 }
 
 // Ensure commands package is imported (for future init registration)
