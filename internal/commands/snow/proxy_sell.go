@@ -56,8 +56,18 @@ func handleProxySellAdd(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	})
 }
 
-// handleProxySellSelect 處理代售物品選擇
+// handleProxySellSelect 處理代售物品選擇（第一個選單，ID < proxySellSplitID）
 func handleProxySellSelect(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	proxySellSave(s, i, true)
+}
+
+// handleProxySellSelect2 處理代售物品選擇（第二個選單，ID >= proxySellSplitID）
+func handleProxySellSelect2(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	proxySellSave(s, i, false)
+}
+
+// proxySellSave 處理代售登記儲存，isFirstMenu 表示是否為第一個選單
+func proxySellSave(s *discordgo.Session, i *discordgo.InteractionCreate, isFirstMenu bool) {
 	server := extractServerFromCustomID(i.MessageComponentData().CustomID)
 	if server == "" {
 		respondWithError(s, i, "無法取得伺服器資訊")
@@ -73,12 +83,31 @@ func handleProxySellSelect(s *discordgo.Session, i *discordgo.InteractionCreate)
 		return
 	}
 
-	// 將選擇的值轉換為物品 ID 字串（逗號分隔）
-	itemIDs := strings.Join(selectedValues, ",")
+	// 取得現有登記，保留另一個選單的選擇
+	var keepIDs []string
+	existingItems, err := database.ProxySellRepo.GetItemsByDiscordIDAndServerAfterTime(userID, server, getLastSaturdayReset())
+	if err == nil && existingItems != "" {
+		for _, idStr := range strings.Split(existingItems, ",") {
+			idStr = strings.TrimSpace(idStr)
+			var id int
+			if _, err := fmt.Sscanf(idStr, "%d", &id); err == nil {
+				// 保留另一個選單範圍的 ID
+				if isFirstMenu && id >= proxySellSplitID {
+					keepIDs = append(keepIDs, idStr)
+				} else if !isFirstMenu && id < proxySellSplitID {
+					keepIDs = append(keepIDs, idStr)
+				}
+			}
+		}
+	}
+
+	// 合併：保留的 + 這次選的
+	allIDs := append(keepIDs, selectedValues...)
+	itemIDs := strings.Join(allIDs, ",")
 
 	// 轉換為物品名稱用於顯示（按 ID 排序）
 	var intIDs []int
-	for _, v := range selectedValues {
+	for _, v := range allIDs {
 		var id int
 		fmt.Sscanf(v, "%d", &id)
 		intIDs = append(intIDs, id)
@@ -86,7 +115,7 @@ func handleProxySellSelect(s *discordgo.Session, i *discordgo.InteractionCreate)
 	selectedNames := itemIDsToNames(intIDs)
 
 	// 使用 GORM Repository 儲存
-	err := database.ProxySellRepo.Upsert(&models.SnowProxySell{
+	err = database.ProxySellRepo.Upsert(&models.SnowProxySell{
 		DiscordID:    userID,
 		ServerRegion: server,
 		Items:        itemIDs,
@@ -100,8 +129,8 @@ func handleProxySellSelect(s *discordgo.Session, i *discordgo.InteractionCreate)
 	log.Printf("[代售登記] 用戶=%s(%s) 伺服器=%s 物品=%s", getUserDisplayName(i), userID, server, strings.Join(selectedNames, ","))
 
 	e := embed.New().
-		Title("✅ 登記成功").
-		Description(fmt.Sprintf("【%s】已登記你可以代售的物品：\n**%s**\n\n其他人現在可以找到你了！", getServerDisplayName(server), strings.Join(selectedNames, "、"))).
+		Title("✅ 已儲存，可繼續選擇另一個選單").
+		Description(fmt.Sprintf("【%s】目前登記的物品：\n**%s**\n\n選完後按「返回」即可。", getServerDisplayName(server), strings.Join(selectedNames, "、"))).
 		Color(embed.ColorSuccess).
 		Build()
 
@@ -109,7 +138,7 @@ func handleProxySellSelect(s *discordgo.Session, i *discordgo.InteractionCreate)
 		Type: discordgo.InteractionResponseUpdateMessage,
 		Data: &discordgo.InteractionResponseData{
 			Embeds:     []*discordgo.MessageEmbed{e},
-			Components: buildProxySellButtons(server),
+			Components: buildProxySellSelectMenu(server, userID),
 		},
 	})
 }
@@ -150,8 +179,8 @@ func handleProxySellSearchSelect(s *discordgo.Session, i *discordgo.InteractionC
 	fmt.Sscanf(data.Values[0], "%d", &searchItemID)
 	searchItemName := getItemNameByID(searchItemID)
 
-	userID := getUserID(i)
-	log.Printf("[代售查詢] 用戶=%s(%s) 伺服器=%s 搜尋物品=%s", getUserDisplayName(i), userID, server, searchItemName)
+	// userID := getUserID(i)
+	// log.Printf("[代售查詢] 用戶=%s(%s) 伺服器=%s 搜尋物品=%s", getUserDisplayName(i), userID, server, searchItemName)
 
 	entries, err := getProxySellEntries(server)
 	if err != nil {
@@ -361,7 +390,9 @@ func registerProxySellHandlers() {
 
 		// 選擇選單處理器
 		commands.RegisterComponent("snow_proxy_sell_select_"+server, handleProxySellSelect)
+		commands.RegisterComponent("snow_proxy_sell_select2_"+server, handleProxySellSelect2)
 		commands.RegisterComponent("snow_proxy_sell_search_select_"+server, handleProxySellSearchSelect)
+		commands.RegisterComponent("snow_proxy_sell_search_select2_"+server, handleProxySellSearchSelect)
 
 		// 分頁處理器（0-9 頁）
 		for page := 0; page < 10; page++ {

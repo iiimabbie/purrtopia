@@ -99,7 +99,10 @@ func buildClearConfirmButtons(actionType, server string) []discordgo.MessageComp
 // 代售選單建構器
 // ============================================
 
-// buildProxySellSelectMenu 建構代售登記下拉選單
+// proxySellSplitID 是代售選單分割點，ID < 此值放第一個選單，>= 放第二個
+const proxySellSplitID = 18
+
+// buildProxySellSelectMenu 建構代售登記下拉選單（分兩個選單避免 Discord 25 上限）
 func buildProxySellSelectMenu(server, userID string) []discordgo.MessageComponent {
 	// 取得用戶已登記的物品
 	selectedItems := make(map[int]bool)
@@ -113,22 +116,47 @@ func buildProxySellSelectMenu(server, userID string) []discordgo.MessageComponen
 		}
 	}
 
-	selectMenu := component.NewSelect().
-		CustomID("snow_proxy_sell_select_" + server).
-		Placeholder("選擇你本週可以代售的物品（多選，重複登記=覆蓋）").
-		MinValues(1).
-		MaxValues(len(proxySellItems))
-
+	// 分割物品
+	var items1, items2 []proxySellItem
 	for _, item := range proxySellItems {
-		if selectedItems[item.ID] {
-			selectMenu.AddOptionDefault(item.Name, fmt.Sprintf("%d", item.ID), "")
+		if item.ID < proxySellSplitID {
+			items1 = append(items1, item)
 		} else {
-			selectMenu.AddOption(item.Name, fmt.Sprintf("%d", item.ID), "")
+			items2 = append(items2, item)
+		}
+	}
+
+	// 第一個選單
+	select1 := component.NewSelect().
+		CustomID("snow_proxy_sell_select_" + server).
+		Placeholder("食物・農產品・魚（多選）").
+		MinValues(0).
+		MaxValues(len(items1))
+	for _, item := range items1 {
+		if selectedItems[item.ID] {
+			select1.AddOptionDefault(item.Name, fmt.Sprintf("%d", item.ID), "")
+		} else {
+			select1.AddOption(item.Name, fmt.Sprintf("%d", item.ID), "")
+		}
+	}
+
+	// 第二個選單
+	select2 := component.NewSelect().
+		CustomID("snow_proxy_sell_select2_" + server).
+		Placeholder("蟲・花・鳥（多選）").
+		MinValues(0).
+		MaxValues(len(items2))
+	for _, item := range items2 {
+		if selectedItems[item.ID] {
+			select2.AddOptionDefault(item.Name, fmt.Sprintf("%d", item.ID), "")
+		} else {
+			select2.AddOption(item.Name, fmt.Sprintf("%d", item.ID), "")
 		}
 	}
 
 	return []discordgo.MessageComponent{
-		component.NewActionRow().AddSelect(selectMenu.Build()).Build(),
+		component.NewActionRow().AddSelect(select1.Build()).Build(),
+		component.NewActionRow().AddSelect(select2.Build()).Build(),
 		component.NewActionRow().
 			AddButton(component.NewButton().CustomID("snow_back_sell_" + server).Label("⬅️ 返回").Secondary().Build()).
 			AddButton(component.NewButton().CustomID("snow_proxy_sell_clear_" + server).Label("🗑️ 清除登記").Danger().Build()).
@@ -136,20 +164,31 @@ func buildProxySellSelectMenu(server, userID string) []discordgo.MessageComponen
 	}
 }
 
-// buildProxySellSearchSelectMenu 建構代售搜尋下拉選單
+// buildProxySellSearchSelectMenu 建構代售搜尋下拉選單（分兩個）
 func buildProxySellSearchSelectMenu(server string) []discordgo.MessageComponent {
-	selectMenu := component.NewSelect().
+	select1 := component.NewSelect().
 		CustomID("snow_proxy_sell_search_select_" + server).
-		Placeholder("選擇你想找的物品").
+		Placeholder("搜尋：食物・飲品・活動").
+		MinValues(1).
+		MaxValues(1)
+
+	select2 := component.NewSelect().
+		CustomID("snow_proxy_sell_search_select2_" + server).
+		Placeholder("搜尋：蝴蝶・植物・冬裝動物").
 		MinValues(1).
 		MaxValues(1)
 
 	for _, item := range proxySellItems {
-		selectMenu.AddOption(item.Name, fmt.Sprintf("%d", item.ID), "")
+		if item.ID < proxySellSplitID {
+			select1.AddOption(item.Name, fmt.Sprintf("%d", item.ID), "")
+		} else {
+			select2.AddOption(item.Name, fmt.Sprintf("%d", item.ID), "")
+		}
 	}
 
 	return []discordgo.MessageComponent{
-		component.NewActionRow().AddSelect(selectMenu.Build()).Build(),
+		component.NewActionRow().AddSelect(select1.Build()).Build(),
+		component.NewActionRow().AddSelect(select2.Build()).Build(),
 		component.NewActionRow().
 			AddButton(component.NewButton().CustomID("snow_back_sell_" + server).Label("⬅️ 返回").Secondary().Build()).
 			Build(),

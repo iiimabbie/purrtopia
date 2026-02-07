@@ -75,43 +75,23 @@ func (b *Bot) onReady(s *discordgo.Session, r *discordgo.Ready) {
 	}
 }
 
-// usageNames maps component/command IDs to friendly Chinese names
-var usageNames = map[string]string{
-	// slash commands
-	"snow_season": "冰雪季",
-	// 代售
+// trackedUsage maps component ID prefixes to friendly Chinese names (only tracked operations)
+var trackedUsage = map[string]string{
 	"snow_proxy_sell_add":    "代售登記",
 	"snow_proxy_sell_search": "代售查詢",
 	"snow_proxy_sell_list":   "代售總覽",
-	"snow_proxy_sell_clear":  "代售清除",
-	// 代購
-	"snow_proxy_buy_add":    "代購登記",
-	"snow_proxy_buy_search": "代購查詢",
-	"snow_proxy_buy_clear":  "代購清除",
-	// navigation
-	"snow_server":      "選擇伺服器",
-	"snow_action_buy":  "進入代購",
-	"snow_action_sell":  "進入代售",
-	"snow_back_main":   "返回主選單",
-	"snow_back_server": "返回伺服器",
-	"snow_back_buy":    "返回代購",
-	"snow_back_sell":   "返回代售",
-	"snow_bubble":      "泡泡提醒",
+	"snow_proxy_buy_add":     "代購登記",
+	"snow_proxy_buy_search":  "代購查詢",
 }
 
-// friendlyName converts a raw customID to a friendly name, stripping server suffixes
-func friendlyName(raw string) string {
-	// Try exact match first
-	if name, ok := usageNames[raw]; ok {
-		return name
-	}
-	// Strip server suffixes and try prefix match
-	for prefix, name := range usageNames {
+// trackedName returns the friendly name if the customID should be tracked, or "" if not
+func trackedName(raw string) string {
+	for prefix, name := range trackedUsage {
 		if strings.HasPrefix(raw, prefix) {
 			return name
 		}
 	}
-	return raw
+	return ""
 }
 
 // displayName returns the member's server nickname, falling back to username
@@ -129,7 +109,7 @@ func (b *Bot) onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate
 		// Slash commands
 		commandName := i.ApplicationCommandData().Name
 		if handler, ok := b.handlers[commandName]; ok {
-			log.Printf("[USAGE] name=%s user=%s uid=%s", friendlyName(commandName), displayName(i), i.Member.User.ID)
+			log.Printf("[USAGE] name=%s user=%s uid=%s", commandName, displayName(i), i.Member.User.ID)
 			handler(s, i)
 		} else {
 			log.Printf("Unknown command: %s", commandName)
@@ -138,7 +118,9 @@ func (b *Bot) onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate
 	case discordgo.InteractionMessageComponent:
 		// Buttons, Select Menus
 		customID := i.MessageComponentData().CustomID
-		log.Printf("[USAGE] name=%s user=%s uid=%s", friendlyName(customID), displayName(i), i.Member.User.ID)
+		if name := trackedName(customID); name != "" {
+			log.Printf("[USAGE] name=%s user=%s uid=%s", name, displayName(i), i.Member.User.ID)
+		}
 		if handler, ok := b.componentHandlers[customID]; ok {
 			handler(s, i)
 		} else {
@@ -159,7 +141,6 @@ func (b *Bot) onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate
 	case discordgo.InteractionModalSubmit:
 		// Modal submissions
 		customID := i.ModalSubmitData().CustomID
-		log.Printf("[USAGE] name=%s user=%s uid=%s", friendlyName(customID), displayName(i), i.Member.User.ID)
 		if handler, ok := b.modalHandlers[customID]; ok {
 			handler(s, i)
 		} else {
