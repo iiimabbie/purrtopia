@@ -18,9 +18,7 @@ var AllServers = []string{ServerAsia, ServerTWHKMO}
 
 // 連結常數
 const (
-	snowBubbleLink     = "https://discord.com/channels/1438429535975641120/1467392127712628900/1467392390045372616"
-	menuPriceLink      = "https://discord.com/channels/1438429535975641120/1452258561156710462/1462660483457876077"
-	proxyBuyItemsImage = "https://duk.tw/vdkUPU.jpg"
+	snowBubbleLink = "https://discord.com/channels/1438429535975641120/1467392127712628900/1467392390045372616"
 )
 
 // 冰雪主題顏色（冰藍色）
@@ -28,9 +26,6 @@ const ColorSnow = 0x87CEEB
 
 // 分頁常數
 const proxySellPageSize = 10
-
-// 代購直排列表
-var proxyBuyColumns = []string{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M"}
 
 // proxySellItem 代售物品
 type proxySellItem struct {
@@ -171,7 +166,7 @@ func getServerDisplayName(server string) string {
 }
 
 // extractServerFromCustomID 從 customID 中提取伺服器區域
-// 例如: "snow_proxy_buy_add_asia" -> "asia"
+// 例如: "snow_proxy_sell_add_asia" -> "asia"
 // 例如: "snow_sell_page_0_twhkmo" -> "twhkmo"
 func extractServerFromCustomID(customID string) string {
 	for _, server := range AllServers {
@@ -200,28 +195,3 @@ func extractPageFromCustomID(customID string) int {
 	return 0
 }
 
-// extractColumnFromCustomID 從 customID 中提取直排
-// 例如: "snow_proxy_buy_row_select_asia_A" -> "A"
-func extractColumnFromCustomID(customID string) string {
-	parts := strings.Split(customID, "_")
-	if len(parts) > 0 {
-		return parts[len(parts)-1]
-	}
-	return ""
-}
-
-// extractServerAndColumnFromRowSelectID 從列選擇 customID 中提取伺服器和直排
-// 例如: "snow_proxy_buy_row_select_asia_A" -> ("asia", "A")
-func extractServerAndColumnFromRowSelectID(customID string) (string, string) {
-	// 格式: snow_proxy_buy_row_select_{server}_{column}
-	prefix := "snow_proxy_buy_row_select_"
-	if !strings.HasPrefix(customID, prefix) {
-		return "", ""
-	}
-	rest := strings.TrimPrefix(customID, prefix)
-	parts := strings.Split(rest, "_")
-	if len(parts) == 2 {
-		return parts[0], parts[1]
-	}
-	return "", ""
-}

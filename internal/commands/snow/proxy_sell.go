@@ -327,8 +327,8 @@ func handleProxySellClear(s *discordgo.Session, i *discordgo.InteractionCreate) 
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseUpdateMessage,
 		Data: &discordgo.InteractionResponseData{
-			Embeds:     []*discordgo.MessageEmbed{buildClearConfirmEmbed("sell", server)},
-			Components: buildClearConfirmButtons("sell", server),
+			Embeds:     []*discordgo.MessageEmbed{buildClearConfirmEmbed(server)},
+			Components: buildClearConfirmButtons(server),
 		},
 	})
 }

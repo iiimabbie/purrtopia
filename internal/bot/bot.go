@@ -80,8 +80,6 @@ var trackedUsage = map[string]string{
 	"snow_proxy_sell_add":    "代售登記",
 	"snow_proxy_sell_search": "代售查詢",
 	"snow_proxy_sell_list":   "代售總覽",
-	"snow_proxy_buy_add":     "代購登記",
-	"snow_proxy_buy_search":  "代購查詢",
 }
 
 // trackedName returns the friendly name if the customID should be tracked, or "" if not
