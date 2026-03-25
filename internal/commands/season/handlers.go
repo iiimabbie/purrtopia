@@ -1,4 +1,4 @@
-package snow
+package season
 
 import (
 	"purrtopia/internal/commands"
@@ -8,37 +8,34 @@ import (
 
 func init() {
 	// 註冊指令
-	commands.RegisterCommand(snowSeasonCommand, SnowSeasonHandler)
-
-	// 註冊按鈕處理器
-	commands.RegisterComponent("snow_bubble", handleSnowBubble)
+	commands.RegisterCommand(seasonCommand, SeasonHandler)
 
 	// 代售功能按鈕（主選單直接進入代售）
 	for _, server := range AllServers {
-		commands.RegisterComponent("snow_action_sell_"+server, handleActionSell)
+		commands.RegisterComponent("season_action_sell_"+server, handleActionSell)
 	}
 
 	// 返回按鈕
-	commands.RegisterComponent("snow_back_main", handleBackToMain)
+	commands.RegisterComponent("season_back_main", handleBackToMain)
 	for _, server := range AllServers {
-		commands.RegisterComponent("snow_back_sell_"+server, handleBackToSell)
+		commands.RegisterComponent("season_back_sell_"+server, handleBackToSell)
 	}
 
 	// 註冊代售處理器
 	registerProxySellHandlers()
 }
 
-var snowSeasonCommand = &discordgo.ApplicationCommand{
-	Name:        "冰雪季",
-	Description: "冰雪季相關資訊與功能",
+var seasonCommand = &discordgo.ApplicationCommand{
+	Name:        "潮流季",
+	Description: "潮流季相關資訊與功能",
 }
 
 // ============================================
 // 主指令處理器
 // ============================================
 
-// SnowSeasonHandler 冰雪季指令主處理器
-func SnowSeasonHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+// SeasonHandler 潮流季指令主處理器
+func SeasonHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -52,17 +49,6 @@ func SnowSeasonHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 // ============================================
 // 導航處理器
 // ============================================
-
-// handleSnowBubble 處理雪人泡泡按鈕
-func handleSnowBubble(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseUpdateMessage,
-		Data: &discordgo.InteractionResponseData{
-			Embeds:     []*discordgo.MessageEmbed{buildSnowBubbleEmbed()},
-			Components: buildBackToMainButton(),
-		},
-	})
-}
 
 // handleActionSell 處理代售功能按鈕
 func handleActionSell(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -92,7 +78,7 @@ func handleBackToMain(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		Data: &discordgo.InteractionResponseData{
 			Embeds:      []*discordgo.MessageEmbed{buildMainEmbed()},
 			Components:  buildMainButtons(),
-			Attachments: &[]*discordgo.MessageAttachment{}, // 清除附件
+			Attachments: &[]*discordgo.MessageAttachment{},
 		},
 	})
 }
@@ -125,15 +111,12 @@ func getUserID(i *discordgo.InteractionCreate) string {
 // getUserDisplayName 取得用戶顯示名稱（優先使用伺服器暱稱）
 func getUserDisplayName(i *discordgo.InteractionCreate) string {
 	if i.Member != nil {
-		// 優先使用伺服器暱稱
 		if i.Member.Nick != "" {
 			return i.Member.Nick
 		}
-		// 其次使用全局顯示名稱
 		if i.Member.User.GlobalName != "" {
 			return i.Member.User.GlobalName
 		}
-		// 最後使用用戶名
 		return i.Member.User.Username
 	}
 	if i.User != nil {
@@ -152,7 +135,7 @@ func respondWithError(s *discordgo.Session, i *discordgo.InteractionCreate, mess
 		Data: &discordgo.InteractionResponseData{
 			Embeds:      []*discordgo.MessageEmbed{buildErrorEmbed(message)},
 			Components:  buildMainButtons(),
-			Attachments: &[]*discordgo.MessageAttachment{}, // 清除附件
+			Attachments: &[]*discordgo.MessageAttachment{},
 		},
 	})
 }

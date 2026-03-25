@@ -13,7 +13,7 @@ import (
 
 	// Import command subpackages to register their init() functions
 	_ "purrtopia/internal/commands/group"
-	_ "purrtopia/internal/commands/snow"
+	_ "purrtopia/internal/commands/season"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -78,9 +78,9 @@ func (b *Bot) onReady(s *discordgo.Session, r *discordgo.Ready) {
 
 // trackedUsage maps component ID prefixes to friendly Chinese names (only tracked operations)
 var trackedUsage = map[string]string{
-	"snow_proxy_sell_add":    "代售登記",
-	"snow_proxy_sell_search": "代售查詢",
-	"snow_proxy_sell_list":   "代售總覽",
+	"season_proxy_sell_add":    "代售登記",
+	"season_proxy_sell_search": "代售查詢",
+	"season_proxy_sell_list":   "代售總覽",
 }
 
 // trackedName returns the friendly name if the customID should be tracked, or "" if not

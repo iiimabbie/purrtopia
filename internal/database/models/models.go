@@ -4,8 +4,8 @@ import (
 	"time"
 )
 
-// SnowProxySell 冰雪市場代售
-type SnowProxySell struct {
+// SeasonProxySell 潮流季代售
+type SeasonProxySell struct {
 	ID           int       `gorm:"primaryKey;autoIncrement"`
 	DiscordID    string    `gorm:"size:32;not null;index;uniqueIndex:unique_user_server"`
 	ServerRegion string    `gorm:"size:10;not null;default:'asia';index;uniqueIndex:unique_user_server"`
@@ -14,8 +14,8 @@ type SnowProxySell struct {
 }
 
 // TableName 指定表名
-func (SnowProxySell) TableName() string {
-	return "snow_proxy_sell"
+func (SeasonProxySell) TableName() string {
+	return "season_proxy_sell"
 }
 
 // GroupActivity 揪團活動

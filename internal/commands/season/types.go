@@ -1,4 +1,4 @@
-package snow
+package season
 
 import (
 	"fmt"
@@ -16,13 +16,8 @@ const (
 // 所有支援的伺服器區域
 var AllServers = []string{ServerAsia, ServerTWHKMO}
 
-// 連結常數
-const (
-	snowBubbleLink = "https://discord.com/channels/1438429535975641120/1467392127712628900/1467392390045372616"
-)
-
-// 冰雪主題顏色（冰藍色）
-const ColorSnow = 0x87CEEB
+// 潮流季主題顏色
+const ColorSeason = 0x87CEEB
 
 // 分頁常數
 const proxySellPageSize = 10
@@ -33,42 +28,9 @@ type proxySellItem struct {
 	Name string
 }
 
-// 代售物品列表（按 ID 排序）
-// ID 17 保留但不顯示在選單中
+// 代售物品列表（每季更新）
 var proxySellItems = []proxySellItem{
-	{1, "冰晶帝王蟹"},
-	{2, "冰晶翻車魚"},
-	{3, "冰晶鯨鯊"},
-	{4, "冰晶河魨"},
-	{5, "冰晶海馬"},
-	{6, "冰杯咖啡"},
-	{7, "冰杯拿鐵"},
-	{8, "白蘿蔔"},
-	{9, "白蘿蔔泥肉"},
-	{10, "白蘿蔔奶油濃湯"},
-	{11, "原味糖霜鬆餅"},
-	{12, "藍莓糖霜鬆餅"},
-	{13, "樹莓糖霜鬆餅"},
-	{14, "蘋果糖霜鬆餅"},
-	{15, "橘子糖霜鬆餅"},
-	{16, "極光晚宴"},
-	{18, "冰晶綠貝矩蛺蝶"},
-	{19, "冰晶玫瑰青鳳蝶"},
-	{20, "冰晶亞歷山大鳳蝶"},
-	{21, "冰晶夜明珠閃蝶"},
-	{22, "冬裝大火烈鳥"},
-	{23, "冬裝綠頭鴨"},
-	{24, "冬裝白秋沙鴨"},
-	{25, "冬裝赤頸鴨"},
-	{26, "紅綠絨蒿"},
-	{27, "黃綠絨蒿"},
-	{28, "白綠絨蒿"},
-	{29, "橙綠絨蒿"},
-	{30, "粉絨蒿"},
-	{31, "桃絨蒿"},
-	{32, "綠綠絨蒿"},
-	{33, "藍綠絨蒿"},
-	{34, "夜光綠絨蒿"},
+	// TODO: 新一季物品在這裡填入
 }
 
 // proxySellEntry 代表資料庫中的代售項目
@@ -101,7 +63,6 @@ func parseItemIDs(s string) []int {
 
 // itemIDsToNames 將物品 ID 轉換為名稱（按 ID 排序）
 func itemIDsToNames(ids []int) []string {
-	// 先排序 ID 以保持顯示順序一致
 	sortedIDs := make([]int, len(ids))
 	copy(sortedIDs, ids)
 	sort.Ints(sortedIDs)
@@ -127,25 +88,18 @@ func containsItemID(itemsStr string, targetID int) bool {
 }
 
 // getLastSaturdayReset 取得上週六早上 6 點（台灣時間 UTC+8）
-// 如果現在還沒到週六早上 6 點，則返回上上週六
 func getLastSaturdayReset() time.Time {
-	// 台灣時區 (UTC+8)
 	loc, err := time.LoadLocation("Asia/Taipei")
 	if err != nil {
-		// 找不到時區則使用固定偏移
 		loc = time.FixedZone("Asia/Taipei", 8*60*60)
 	}
 
 	now := time.Now().In(loc)
+	daysSinceSaturday := int(now.Weekday()+1) % 7
 
-	// 找到最近的週六
-	daysSinceSaturday := int(now.Weekday()+1) % 7 // 週六 = 6，所以 (weekday + 1) % 7 得到距離週六的天數
-
-	// 取得上週六早上 6 點
 	lastSaturday := now.AddDate(0, 0, -daysSinceSaturday)
 	resetTime := time.Date(lastSaturday.Year(), lastSaturday.Month(), lastSaturday.Day(), 6, 0, 0, 0, loc)
 
-	// 如果還沒到這週六早上 6 點，則往回推一週
 	if now.Before(resetTime) {
 		resetTime = resetTime.AddDate(0, 0, -7)
 	}
@@ -166,8 +120,6 @@ func getServerDisplayName(server string) string {
 }
 
 // extractServerFromCustomID 從 customID 中提取伺服器區域
-// 例如: "snow_proxy_sell_add_asia" -> "asia"
-// 例如: "snow_sell_page_0_twhkmo" -> "twhkmo"
 func extractServerFromCustomID(customID string) string {
 	for _, server := range AllServers {
 		if strings.HasSuffix(customID, "_"+server) {
@@ -178,12 +130,11 @@ func extractServerFromCustomID(customID string) string {
 }
 
 // extractPageFromCustomID 從 customID 中提取頁碼
-// 例如: "snow_sell_page_2_asia" -> 2
 func extractPageFromCustomID(customID string) int {
 	for _, server := range AllServers {
 		suffix := "_" + server
 		if strings.HasSuffix(customID, suffix) {
-			prefix := "snow_sell_page_"
+			prefix := "season_sell_page_"
 			trimmed := strings.TrimSuffix(customID, suffix)
 			if strings.HasPrefix(trimmed, prefix) {
 				var page int
@@ -194,4 +145,3 @@ func extractPageFromCustomID(customID string) int {
 	}
 	return 0
 }
-

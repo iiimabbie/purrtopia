@@ -19,7 +19,7 @@ var DB *gorm.DB
 
 // Repositories (類似 Spring 的 @Autowired Repository)
 var (
-	ProxySellRepo       *repository.SnowProxySellRepository
+	ProxySellRepo       *repository.SeasonProxySellRepository
 	GroupActivityRepo   *repository.GroupActivityRepository
 	GroupThreadNameRepo *repository.GroupThreadNameRepository
 )
@@ -60,7 +60,7 @@ func Connect(cfg *config.DBConfig) error {
 
 	// Auto migrate (自動建表，類似 JPA ddl-auto)
 	if err = DB.AutoMigrate(
-		&models.SnowProxySell{},
+		&models.SeasonProxySell{},
 		&models.GroupActivity{},
 		&models.GroupThreadName{},
 	); err != nil {
@@ -70,7 +70,7 @@ func Connect(cfg *config.DBConfig) error {
 	log.Println("Database schema migrated successfully")
 
 	// 初始化 Repositories (類似 Spring Bean)
-	ProxySellRepo = repository.NewSnowProxySellRepository(DB)
+	ProxySellRepo = repository.NewSeasonProxySellRepository(DB)
 	GroupActivityRepo = repository.NewGroupActivityRepository(DB)
 	GroupThreadNameRepo = repository.NewGroupThreadNameRepository(DB)
 
