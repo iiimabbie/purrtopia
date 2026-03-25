@@ -83,6 +83,16 @@ func proxySellSave(s *discordgo.Session, i *discordgo.InteractionCreate, isFirst
 	}
 
 	// 取得現有登記，保留另一個選單的選擇
+	// 建立當前選單的 category ID 集合
+	currentCategoryIDs := make(map[int]bool)
+	category := 2
+	if isFirstMenu {
+		category = 1
+	}
+	for _, item := range getSeasonItemsByCategory(category) {
+		currentCategoryIDs[item.ID] = true
+	}
+
 	var keepIDs []string
 	existingItems, err := database.ProxySellRepo.GetItemsByDiscordIDAndServerAfterTime(userID, server, getLastSaturdayReset())
 	if err == nil && existingItems != "" {
@@ -90,9 +100,8 @@ func proxySellSave(s *discordgo.Session, i *discordgo.InteractionCreate, isFirst
 			idStr = strings.TrimSpace(idStr)
 			var id int
 			if _, err := fmt.Sscanf(idStr, "%d", &id); err == nil {
-				if isFirstMenu && id >= proxySellSplitID {
-					keepIDs = append(keepIDs, idStr)
-				} else if !isFirstMenu && id < proxySellSplitID {
+				// 保留不屬於當前選單的 ID
+				if !currentCategoryIDs[id] {
 					keepIDs = append(keepIDs, idStr)
 				}
 			}

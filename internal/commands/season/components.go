@@ -59,10 +59,7 @@ func buildClearConfirmButtons(server string) []discordgo.MessageComponent {
 // 代售選單建構器
 // ============================================
 
-// proxySellSplitID 是代售選單分割點，ID < 此值放第一個選單，>= 放第二個
-const proxySellSplitID = 18
-
-// buildProxySellSelectMenu 建構代售登記下拉選單（分兩個選單避免 Discord 25 上限）
+// buildProxySellSelectMenu 建構代售登記下拉選單（按 category 分組）
 func buildProxySellSelectMenu(server, userID string) []discordgo.MessageComponent {
 	// 取得用戶已登記的物品
 	selectedItems := make(map[int]bool)
@@ -76,19 +73,11 @@ func buildProxySellSelectMenu(server, userID string) []discordgo.MessageComponen
 		}
 	}
 
-	// 分割物品
-	var items1, items2 []proxySellItem
-	for _, item := range proxySellItems {
-		if item.ID < proxySellSplitID {
-			items1 = append(items1, item)
-		} else {
-			items2 = append(items2, item)
-		}
-	}
+	items1 := getSeasonItemsByCategory(1)
+	items2 := getSeasonItemsByCategory(2)
 
 	var rows []discordgo.MessageComponent
 
-	// 第一個選單（如果有物品）
 	if len(items1) > 0 {
 		select1 := component.NewSelect().
 			CustomID("season_proxy_sell_select_" + server).
@@ -105,7 +94,6 @@ func buildProxySellSelectMenu(server, userID string) []discordgo.MessageComponen
 		rows = append(rows, component.NewActionRow().AddSelect(select1.Build()).Build())
 	}
 
-	// 第二個選單（如果有物品）
 	if len(items2) > 0 {
 		select2 := component.NewSelect().
 			CustomID("season_proxy_sell_select2_" + server).
@@ -122,7 +110,6 @@ func buildProxySellSelectMenu(server, userID string) []discordgo.MessageComponen
 		rows = append(rows, component.NewActionRow().AddSelect(select2.Build()).Build())
 	}
 
-	// 按鈕列
 	rows = append(rows, component.NewActionRow().
 		AddButton(component.NewButton().CustomID("season_back_sell_"+server).Label("⬅️ 返回代售").Secondary().Build()).
 		AddButton(component.NewButton().CustomID("season_proxy_sell_clear_"+server).Label("🗑️ 清除登記").Danger().Build()).
@@ -135,14 +122,8 @@ func buildProxySellSelectMenu(server, userID string) []discordgo.MessageComponen
 func buildProxySellSearchSelectMenu(server string) []discordgo.MessageComponent {
 	var rows []discordgo.MessageComponent
 
-	var items1, items2 []proxySellItem
-	for _, item := range proxySellItems {
-		if item.ID < proxySellSplitID {
-			items1 = append(items1, item)
-		} else {
-			items2 = append(items2, item)
-		}
-	}
+	items1 := getSeasonItemsByCategory(1)
+	items2 := getSeasonItemsByCategory(2)
 
 	if len(items1) > 0 {
 		select1 := component.NewSelect().

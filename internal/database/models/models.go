@@ -18,6 +18,18 @@ func (SeasonProxySell) TableName() string {
 	return "season_proxy_sell"
 }
 
+// SeasonItem 潮流季代售物品目錄
+type SeasonItem struct {
+	ID       int    `gorm:"primaryKey;autoIncrement"`
+	Name     string `gorm:"size:100;not null"`
+	Category int    `gorm:"not null;default:1"` // 1=第一組選單, 2=第二組選單
+}
+
+// TableName 指定表名
+func (SeasonItem) TableName() string {
+	return "season_items"
+}
+
 // GroupActivity 揪團活動
 type GroupActivity struct {
 	ID           int       `gorm:"primaryKey;autoIncrement"`

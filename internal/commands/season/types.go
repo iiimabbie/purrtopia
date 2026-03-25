@@ -5,6 +5,9 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"purrtopia/internal/database"
+	"purrtopia/internal/database/models"
 )
 
 // 伺服器區域常數
@@ -22,31 +25,37 @@ const ColorSeason = 0x87CEEB
 // 分頁常數
 const proxySellPageSize = 10
 
-// proxySellItem 代售物品
-type proxySellItem struct {
-	ID   int
-	Name string
-}
-
-// 代售物品列表（每季更新）
-var proxySellItems = []proxySellItem{
-	// TODO: 新一季物品在這裡填入
-}
-
 // proxySellEntry 代表資料庫中的代售項目
 type proxySellEntry struct {
 	DiscordID string
 	Items     string
 }
 
+// getSeasonItems 從 DB 取得所有物品
+func getSeasonItems() []models.SeasonItem {
+	items, err := database.SeasonItemRepo.FindAll()
+	if err != nil {
+		return nil
+	}
+	return items
+}
+
+// getSeasonItemsByCategory 從 DB 取得指定分類的物品
+func getSeasonItemsByCategory(category int) []models.SeasonItem {
+	items, err := database.SeasonItemRepo.FindByCategory(category)
+	if err != nil {
+		return nil
+	}
+	return items
+}
+
 // getItemNameByID 根據 ID 取得物品名稱
 func getItemNameByID(id int) string {
-	for _, item := range proxySellItems {
-		if item.ID == id {
-			return item.Name
-		}
+	item, err := database.SeasonItemRepo.FindByID(id)
+	if err != nil {
+		return ""
 	}
-	return ""
+	return item.Name
 }
 
 // parseItemIDs 解析逗號分隔的物品 ID 字串
@@ -67,9 +76,16 @@ func itemIDsToNames(ids []int) []string {
 	copy(sortedIDs, ids)
 	sort.Ints(sortedIDs)
 
+	// 一次查所有物品，避免 N+1
+	allItems := getSeasonItems()
+	itemMap := make(map[int]string, len(allItems))
+	for _, item := range allItems {
+		itemMap[item.ID] = item.Name
+	}
+
 	var names []string
 	for _, id := range sortedIDs {
-		if name := getItemNameByID(id); name != "" {
+		if name, ok := itemMap[id]; ok {
 			names = append(names, name)
 		}
 	}
