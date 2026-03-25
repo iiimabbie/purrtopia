@@ -9,30 +9,19 @@ services:
       - GUILD_IDS=${GUILD_IDS:-}
       - BOT_OWNER_IDS=${BOT_OWNER_IDS:-}
       - BOT_ADMIN_IDS=${BOT_ADMIN_IDS:-}
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_USER=${DB_USER:-purrtopia}
+      - DB_HOST=${DB_HOST:-db}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-heartopia}
       - DB_PASSWORD=${DB_PASSWORD:-changeme}
-      - DB_NAME=${DB_NAME:-purrtopia}
+      - DB_NAME=${DB_NAME:-heartopia}
       # Gemini AI
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
       - GEMINI_FALLBACK_ENDPOINT=${GEMINI_FALLBACK_ENDPOINT:-}
       - GEMINI_FALLBACK_API_KEY=${GEMINI_FALLBACK_API_KEY:-}
       - GEMINI_FALLBACK_MODEL=${GEMINI_FALLBACK_MODEL:-gemini-2.5-flash}
-      # AI Feature Toggles
-      - AI_ENABLE_MENTION=${AI_ENABLE_MENTION:-false}
-      - AI_ENABLE_CLASSIFY=${AI_ENABLE_CLASSIFY:-false}
-      # Keyword Trigger
-      - KEYWORD_TRIGGERS=${KEYWORD_TRIGGERS:-}
-      - CHANNEL_BUBBLE=${CHANNEL_BUBBLE:-}
-      - CHANNEL_DAILY_TOWN=${CHANNEL_DAILY_TOWN:-}
-      - CHANNEL_WEATHER=${CHANNEL_WEATHER:-}
-      - CHANNEL_HELPER=${CHANNEL_HELPER:-}
-      - KEYWORD_ENABLED_CHANNELS=${KEYWORD_ENABLED_CHANNELS:-}
-    depends_on:
-      mysql:
-        condition: service_healthy
+    labels:
+      - "glance.url=https://example.com/?folder=/app"
     profiles:
       - prod
     # Alternatively, use env_file:
@@ -57,68 +46,20 @@ services:
       - GUILD_IDS=${GUILD_IDS:-}
       - BOT_OWNER_IDS=${BOT_OWNER_IDS:-}
       - BOT_ADMIN_IDS=${BOT_ADMIN_IDS:-}
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_USER=${DB_USER:-purrtopia}
+      - DB_HOST=${DB_HOST:-db}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-heartopia}
       - DB_PASSWORD=${DB_PASSWORD:-changeme}
-      - DB_NAME=${DB_NAME:-purrtopia}
+      - DB_NAME=${DB_NAME:-heartopia}
       # Gemini AI
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash}
       - GEMINI_FALLBACK_ENDPOINT=${GEMINI_FALLBACK_ENDPOINT:-}
       - GEMINI_FALLBACK_API_KEY=${GEMINI_FALLBACK_API_KEY:-}
       - GEMINI_FALLBACK_MODEL=${GEMINI_FALLBACK_MODEL:-gemini-2.5-flash}
-      # AI Feature Toggles
-      - AI_ENABLE_MENTION=${AI_ENABLE_MENTION:-false}
-      - AI_ENABLE_CLASSIFY=${AI_ENABLE_CLASSIFY:-false}
-      # Keyword Trigger
-      - KEYWORD_TRIGGERS=${KEYWORD_TRIGGERS:-}
-      - CHANNEL_BUBBLE=${CHANNEL_BUBBLE:-}
-      - CHANNEL_DAILY_TOWN=${CHANNEL_DAILY_TOWN:-}
-      - CHANNEL_WEATHER=${CHANNEL_WEATHER:-}
-      - CHANNEL_HELPER=${CHANNEL_HELPER:-}
-      - KEYWORD_ENABLED_CHANNELS=${KEYWORD_ENABLED_CHANNELS:-}
     volumes:
       - .:/app
-    depends_on:
-      mysql:
-        condition: service_healthy
+    labels:
+      - "glance.url=https://example.com/?folder=/app"
     profiles:
       - dev
-
-  mysql:
-    image: mysql:8.0
-    container_name: purrtopia-mysql
-    restart: unless-stopped
-    environment:
-      - TZ=Asia/Taipei
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root_secret}
-      - MYSQL_DATABASE=${DB_NAME:-purrtopia}
-      - MYSQL_USER=${DB_USER:-purrtopia}
-      - MYSQL_PASSWORD=${DB_PASSWORD:-changeme}
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # 自動備份服務（每天備份，保留 7 天）
-  mysql-backup:
-    image: databack/mysql-backup
-    container_name: purrtopia-mysql-backup
-    restart: unless-stopped
-    environment:
-      - TZ=Asia/Taipei
-    command: dump --server=mysql --user=${DB_USER:-purrtopia} --pass=${DB_PASSWORD:-changeme} --include=${DB_NAME:-purrtopia} --target=/db --frequency=1440 --begin=0300 --compression=gzip
-    volumes:
-      - ./backups:/db           # 備份到本機 ./backups 資料夾
-    depends_on:
-      mysql:
-        condition: service_healthy
-
-volumes:
-  mysql_data:

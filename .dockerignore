@@ -29,7 +29,6 @@
 
 # Documentation
 *.md
-!Information.md
 LICENSE
 
 # OS files
@@ -41,4 +40,3 @@ Dockerfile*
 docker-compose*.yml
 .dockerignore
 
-backups/

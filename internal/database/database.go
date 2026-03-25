@@ -9,7 +9,7 @@ import (
 	"purrtopia/internal/database/models"
 	"purrtopia/internal/database/repository"
 
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -19,13 +19,12 @@ var DB *gorm.DB
 
 // Repositories (類似 Spring 的 @Autowired Repository)
 var (
-	AvatarRepo    *repository.AvatarRepository
-	DrawnHeadRepo *repository.DrawnHeadRepository
-	ProxyBuyRepo  *repository.SnowProxyBuyRepository
-	ProxySellRepo *repository.SnowProxySellRepository
+	ProxySellRepo       *repository.SnowProxySellRepository
+	GroupActivityRepo   *repository.GroupActivityRepository
+	GroupThreadNameRepo *repository.GroupThreadNameRepository
 )
 
-// Connect establishes a connection to the MySQL database using GORM
+// Connect establishes a connection to the PostgreSQL database using GORM
 func Connect(cfg *config.DBConfig) error {
 	var err error
 
@@ -36,7 +35,7 @@ func Connect(cfg *config.DBConfig) error {
 	}
 
 	// 連接資料庫
-	DB, err = gorm.Open(mysql.Open(cfg.DSN()), gormConfig)
+	DB, err = gorm.Open(postgres.Open(cfg.DSN()), gormConfig)
 	if err != nil {
 		return fmt.Errorf("failed to connect database: %w", err)
 	}
@@ -61,10 +60,9 @@ func Connect(cfg *config.DBConfig) error {
 
 	// Auto migrate (自動建表，類似 JPA ddl-auto)
 	if err = DB.AutoMigrate(
-		&models.UserAvatar{},
-		&models.DrawnHead{},
-		&models.SnowProxyBuy{},
 		&models.SnowProxySell{},
+		&models.GroupActivity{},
+		&models.GroupThreadName{},
 	); err != nil {
 		return fmt.Errorf("failed to auto migrate: %w", err)
 	}
@@ -72,12 +70,14 @@ func Connect(cfg *config.DBConfig) error {
 	log.Println("Database schema migrated successfully")
 
 	// 初始化 Repositories (類似 Spring Bean)
-	AvatarRepo = repository.NewAvatarRepository(DB)
-	DrawnHeadRepo = repository.NewDrawnHeadRepository(DB)
-	ProxyBuyRepo = repository.NewSnowProxyBuyRepository(DB)
 	ProxySellRepo = repository.NewSnowProxySellRepository(DB)
+	GroupActivityRepo = repository.NewGroupActivityRepository(DB)
+	GroupThreadNameRepo = repository.NewGroupThreadNameRepository(DB)
 
 	log.Println("Repositories initialized")
+
+	// 植入初始資料（僅首次執行）
+	SeedGroupThreadNames()
 
 	return nil
 }

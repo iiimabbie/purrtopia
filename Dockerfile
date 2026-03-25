@@ -30,9 +30,6 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /bot .
 
-# Copy game information file
-COPY --from=builder /app/Information.md .
-
 # Copy resources folder (images, etc.)
 COPY --from=builder /app/resources ./resources
 

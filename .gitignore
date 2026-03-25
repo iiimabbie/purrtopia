@@ -4,8 +4,8 @@
 *.dll
 *.so
 *.dylib
-bot
-discord-bot
+/bot
+/discord-bot
 
 # Test binary, build with `go test -c`
 *.test
@@ -50,10 +50,5 @@ logs/
 # Air hot reload
 /tmp/
 
-# Backups
-backups/*
-!backups/.gitkeep
-
 # Local documentation (not for git)
 DOCKER.md
-Information.md

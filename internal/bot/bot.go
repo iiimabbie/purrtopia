@@ -12,7 +12,7 @@ import (
 	"purrtopia/internal/config"
 
 	// Import command subpackages to register their init() functions
-	_ "purrtopia/internal/commands/gacha"
+	_ "purrtopia/internal/commands/group"
 	_ "purrtopia/internal/commands/snow"
 
 	"github.com/bwmarrin/discordgo"
@@ -59,8 +59,9 @@ func (b *Bot) registerHandlers() {
 	// Interaction (slash command) handler
 	b.session.AddHandler(b.onInteraction)
 
-	// Message handler for keyword-triggered responses
-	b.session.AddHandler(b.onMessageCreate)
+	// Reaction role handler
+	b.session.AddHandler(b.onReactionAdd)
+	b.session.AddHandler(b.onReactionRemove)
 }
 
 // onReady is called when the bot is ready
@@ -150,7 +151,7 @@ func (b *Bot) onInteraction(s *discordgo.Session, i *discordgo.InteractionCreate
 // Start starts the bot
 func (b *Bot) Start() error {
 	// Set intents (MessageContent is required to read message content)
-	b.session.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentMessageContent
+	b.session.Identify.Intents = discordgo.IntentsGuilds | discordgo.IntentsGuildMessages | discordgo.IntentMessageContent | discordgo.IntentsGuildMessageReactions
 
 	// Open connection
 	err := b.session.Open()
