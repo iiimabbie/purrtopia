@@ -3,21 +3,21 @@ package bot
 import (
 	"log"
 
+	"purrtopia/internal/database"
+
 	"github.com/bwmarrin/discordgo"
 )
 
-// reactionRoleMessageID 監看的訊息 ID
-const reactionRoleMessageID = "1476903139050520668"
-
-// reactionRoleIDs 要發放／移除的身份組 ID 清單
-var reactionRoleIDs = []string{
-	"1476601339151650826", // 出海
-	"1476601591774839007", // 灑花
-}
+// Config keys（對應 bot_config 表的 key）
+const (
+	ConfigReactionRoleMessageID = "reaction_role_message_id"
+	ConfigReactionRoleIDs       = "reaction_role_ids"
+)
 
 // onReactionAdd 監聽反應新增事件：🛠️ → 發放所有身份組
 func (b *Bot) onReactionAdd(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
-	if r.MessageID != reactionRoleMessageID {
+	messageID := database.BotConfigRepo.Get(ConfigReactionRoleMessageID)
+	if messageID == "" || r.MessageID != messageID {
 		return
 	}
 	if s.State.User != nil && r.UserID == s.State.User.ID {
@@ -29,7 +29,8 @@ func (b *Bot) onReactionAdd(s *discordgo.Session, r *discordgo.MessageReactionAd
 		return
 	}
 
-	for _, roleID := range reactionRoleIDs {
+	roleIDs := database.BotConfigRepo.GetList(ConfigReactionRoleIDs)
+	for _, roleID := range roleIDs {
 		if err := s.GuildMemberRoleAdd(r.GuildID, r.UserID, roleID); err != nil {
 			log.Printf("[reactionrole] 新增身份組失敗 userID=%s roleID=%s: %v", r.UserID, roleID, err)
 		}
@@ -37,9 +38,10 @@ func (b *Bot) onReactionAdd(s *discordgo.Session, r *discordgo.MessageReactionAd
 	log.Printf("[reactionrole] 發放身份組 userID=%s", r.UserID)
 }
 
-// onReactionRemove 監聽反應移除事件：取消 🛠️ → 移除所有身份組
+// onReactionRemove 監聯反應移除事件：取消 🛠️ → 移除所有身份組
 func (b *Bot) onReactionRemove(s *discordgo.Session, r *discordgo.MessageReactionRemove) {
-	if r.MessageID != reactionRoleMessageID {
+	messageID := database.BotConfigRepo.Get(ConfigReactionRoleMessageID)
+	if messageID == "" || r.MessageID != messageID {
 		return
 	}
 	if s.State.User != nil && r.UserID == s.State.User.ID {
@@ -49,7 +51,8 @@ func (b *Bot) onReactionRemove(s *discordgo.Session, r *discordgo.MessageReactio
 		return
 	}
 
-	for _, roleID := range reactionRoleIDs {
+	roleIDs := database.BotConfigRepo.GetList(ConfigReactionRoleIDs)
+	for _, roleID := range roleIDs {
 		if err := s.GuildMemberRoleRemove(r.GuildID, r.UserID, roleID); err != nil {
 			log.Printf("[reactionrole] 移除身份組失敗 userID=%s roleID=%s: %v", r.UserID, roleID, err)
 		}

@@ -19,6 +19,7 @@ var DB *gorm.DB
 
 // Repositories (類似 Spring 的 @Autowired Repository)
 var (
+	BotConfigRepo       *repository.BotConfigRepository
 	SeasonItemRepo      *repository.SeasonItemRepository
 	ProxySellRepo       *repository.SeasonProxySellRepository
 	GroupActivityRepo   *repository.GroupActivityRepository
@@ -61,6 +62,7 @@ func Connect(cfg *config.DBConfig) error {
 
 	// Auto migrate (自動建表，類似 JPA ddl-auto)
 	if err = DB.AutoMigrate(
+		&models.BotConfig{},
 		&models.SeasonItem{},
 		&models.SeasonProxySell{},
 		&models.GroupActivity{},
@@ -72,12 +74,18 @@ func Connect(cfg *config.DBConfig) error {
 	log.Println("Database schema migrated successfully")
 
 	// 初始化 Repositories (類似 Spring Bean)
+	BotConfigRepo = repository.NewBotConfigRepository(DB)
 	SeasonItemRepo = repository.NewSeasonItemRepository(DB)
 	ProxySellRepo = repository.NewSeasonProxySellRepository(DB)
 	GroupActivityRepo = repository.NewGroupActivityRepository(DB)
 	GroupThreadNameRepo = repository.NewGroupThreadNameRepository(DB)
 
 	log.Println("Repositories initialized")
+
+	// 載入 bot_config 到記憶體 cache
+	if err = BotConfigRepo.LoadAll(); err != nil {
+		return fmt.Errorf("failed to load bot config: %w", err)
+	}
 
 	// 植入初始資料（僅首次執行）
 	SeedGroupThreadNames()

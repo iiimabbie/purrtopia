@@ -385,9 +385,8 @@ func registerProxySellHandlers() {
 		commands.RegisterComponent("season_proxy_sell_select2_"+server, handleProxySellSelect2)
 		commands.RegisterComponent("season_proxy_sell_search_select_"+server, handleProxySellSearchSelect)
 		commands.RegisterComponent("season_proxy_sell_search_select2_"+server, handleProxySellSearchSelect)
-
-		for page := 0; page < 10; page++ {
-			commands.RegisterComponent(fmt.Sprintf("season_sell_page_%d_%s", page, server), handleProxySellPage)
-		}
 	}
+
+	// 分頁用 prefix handler，不限頁數
+	commands.RegisterComponentPrefix("season_sell_page_", handleProxySellPage)
 }

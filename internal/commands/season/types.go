@@ -2,6 +2,7 @@ package season
 
 import (
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 	"time"
@@ -35,6 +36,7 @@ type proxySellEntry struct {
 func getSeasonItems() []models.SeasonItem {
 	items, err := database.SeasonItemRepo.FindAll()
 	if err != nil {
+		log.Printf("[season] 查詢所有物品失敗: %v", err)
 		return nil
 	}
 	return items
@@ -44,6 +46,7 @@ func getSeasonItems() []models.SeasonItem {
 func getSeasonItemsByCategory(category int) []models.SeasonItem {
 	items, err := database.SeasonItemRepo.FindByCategory(category)
 	if err != nil {
+		log.Printf("[season] 查詢分類 %d 物品失敗: %v", category, err)
 		return nil
 	}
 	return items
@@ -53,6 +56,7 @@ func getSeasonItemsByCategory(category int) []models.SeasonItem {
 func getItemNameByID(id int) string {
 	item, err := database.SeasonItemRepo.FindByID(id)
 	if err != nil {
+		log.Printf("[season] 查詢物品 ID=%d 失敗: %v", id, err)
 		return ""
 	}
 	return item.Name

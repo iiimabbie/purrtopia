@@ -4,17 +4,18 @@ import (
 	"fmt"
 	"strings"
 
+	"purrtopia/internal/database"
+
 	"github.com/bwmarrin/discordgo"
 )
 
-// allowedChannelIDs 允許使用揪團功能的頻道 ID
-var allowedChannelIDs = map[string]struct{}{
-	"1476875399475761152": {},
-	"1463020876168429578": {},
-}
-
-// 工具箱身份組 ID（錯誤訊息 mention 用）
-const ToolboxRoleID = "1468173819901644916"
+// Config keys（對應 bot_config 表的 key）
+const (
+	ConfigGroupAllowedChannels = "group_allowed_channels"
+	ConfigToolboxRoleID        = "toolbox_role_id"
+	ConfigRainbowRoleID        = "rainbow_role_id"
+	ConfigFishingRoleID        = "fishing_role_id"
+)
 
 // ActivityType 揪團類型
 type ActivityType string
@@ -30,10 +31,10 @@ var activityNames = map[ActivityType]string{
 	ActivityFishing: "出海",
 }
 
-// activityRoles 各類型對應的身份組 ID
-var activityRoles = map[ActivityType]string{
-	ActivityRainbow: "1476601591774839007",
-	ActivityFishing: "1476601339151650826",
+// activityRoleKeys 各類型對應的 bot_config key
+var activityRoleKeys = map[ActivityType]string{
+	ActivityRainbow: ConfigRainbowRoleID,
+	ActivityFishing: ConfigFishingRoleID,
 }
 
 // activityColors 各類型主題色
@@ -55,7 +56,7 @@ var activityAnnouncements = map[ActivityType]string{
 }
 
 func (a ActivityType) Name() string         { return activityNames[a] }
-func (a ActivityType) RoleID() string       { return activityRoles[a] }
+func (a ActivityType) RoleID() string       { return database.BotConfigRepo.Get(activityRoleKeys[a]) }
 func (a ActivityType) Color() int           { return activityColors[a] }
 func (a ActivityType) Emoji() string        { return activityEmojis[a] }
 func (a ActivityType) Label() string        { return a.Emoji() + " " + a.Name() }
@@ -66,11 +67,18 @@ func memberCount(members string) int {
 	if members == "" {
 		return 0
 	}
-	return len(strings.Split(members, ","))
+	count := 0
+	for _, m := range strings.Split(members, ",") {
+		if strings.TrimSpace(m) != "" {
+			count++
+		}
+	}
+	return count
 }
 
 // addMember 加入報名者 ID
 func addMember(members, discordID string) string {
+	discordID = strings.TrimSpace(discordID)
 	if members == "" {
 		return discordID
 	}
@@ -148,7 +156,8 @@ func getUserID(i *discordgo.InteractionCreate) string {
 
 // channelCheck 檢查是否在允許的頻道，否則回 ephemeral 擋住
 func channelCheck(s *discordgo.Session, i *discordgo.InteractionCreate) bool {
-	if _, ok := allowedChannelIDs[i.ChannelID]; !ok {
+	allowed := database.BotConfigRepo.GetMap(ConfigGroupAllowedChannels)
+	if _, ok := allowed[i.ChannelID]; !ok {
 		respondWithEphemeral(s, i, "此頻道不支援揪團功能哦！")
 		return false
 	}
@@ -168,7 +177,11 @@ func respondWithEphemeral(s *discordgo.Session, i *discordgo.InteractionCreate, 
 
 // errorMsg 統一錯誤訊息內容
 func errorMsg() string {
-	return fmt.Sprintf("對不起，我好像有點錯誤，可以幫我 <@&%s> 嗎? 🥺", ToolboxRoleID)
+	roleID := database.BotConfigRepo.Get(ConfigToolboxRoleID)
+	if roleID == "" {
+		return "對不起，我好像有點錯誤 🥺"
+	}
+	return fmt.Sprintf("對不起，我好像有點錯誤，可以幫我 <@&%s> 嗎? 🥺", roleID)
 }
 
 // respondWithError 回覆統一友善錯誤訊息（用於尚未 acknowledge 的 interaction）

@@ -10,7 +10,8 @@ type SeasonProxySell struct {
 	DiscordID    string    `gorm:"size:32;not null;index;uniqueIndex:unique_user_server"`
 	ServerRegion string    `gorm:"size:10;not null;default:'asia';index;uniqueIndex:unique_user_server"`
 	Items        string    `gorm:"type:text;not null"`
-	CreatedAt    time.Time `gorm:"autoCreateTime;index"`
+	CreatedAt    time.Time `gorm:"autoCreateTime"`
+	UpdatedAt    time.Time `gorm:"autoUpdateTime;index"`
 }
 
 // TableName 指定表名
@@ -50,6 +51,18 @@ type GroupActivity struct {
 // TableName 指定表名
 func (GroupActivity) TableName() string {
 	return "group_activities"
+}
+
+// BotConfig 機器人設定（key-value）
+type BotConfig struct {
+	ID    int    `gorm:"primaryKey;autoIncrement"`
+	Key   string `gorm:"size:100;not null;uniqueIndex"`
+	Value string `gorm:"type:text;not null"`
+}
+
+// TableName 指定表名
+func (BotConfig) TableName() string {
+	return "bot_config"
 }
 
 // GroupThreadName 揪團隨機團名目錄

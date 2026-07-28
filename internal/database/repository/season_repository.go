@@ -28,7 +28,7 @@ func NewSeasonProxySellRepository(db *gorm.DB) *SeasonProxySellRepository {
 // GetItemsByDiscordIDAndServerAfterTime 取得用戶在指定伺服器的代售物品字串
 func (r *SeasonProxySellRepository) GetItemsByDiscordIDAndServerAfterTime(discordID, serverRegion string, after time.Time) (string, error) {
 	var entry models.SeasonProxySell
-	err := r.db.Where("discord_id = ? AND server_region = ? AND created_at >= ?", discordID, serverRegion, after).First(&entry).Error
+	err := r.db.Where("discord_id = ? AND server_region = ? AND updated_at >= ?", discordID, serverRegion, after).First(&entry).Error
 	if err != nil {
 		return "", err
 	}
@@ -40,8 +40,8 @@ func (r *SeasonProxySellRepository) FindAllByServerAfterTime(serverRegion string
 	var entries []ProxyEntry
 	err := r.db.Model(&models.SeasonProxySell{}).
 		Select("discord_id, items").
-		Where("server_region = ? AND created_at >= ?", serverRegion, after).
-		Order("created_at DESC").
+		Where("server_region = ? AND updated_at >= ?", serverRegion, after).
+		Order("updated_at DESC").
 		Scan(&entries).Error
 	return entries, err
 }
@@ -50,12 +50,12 @@ func (r *SeasonProxySellRepository) FindAllByServerAfterTime(serverRegion string
 func (r *SeasonProxySellRepository) Upsert(entry *models.SeasonProxySell) error {
 	return r.db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "discord_id"}, {Name: "server_region"}},
-		DoUpdates: clause.Assignments(map[string]interface{}{"items": entry.Items, "created_at": time.Now()}),
+		DoUpdates: clause.Assignments(map[string]interface{}{"items": entry.Items, "updated_at": time.Now()}),
 	}).Create(entry).Error
 }
 
 // DeleteByDiscordIDAndServerAfterTime 刪除指定用戶、伺服器、時間後的代售項目
 func (r *SeasonProxySellRepository) DeleteByDiscordIDAndServerAfterTime(discordID, serverRegion string, after time.Time) error {
-	return r.db.Where("discord_id = ? AND server_region = ? AND created_at >= ?", discordID, serverRegion, after).
+	return r.db.Where("discord_id = ? AND server_region = ? AND updated_at >= ?", discordID, serverRegion, after).
 		Delete(&models.SeasonProxySell{}).Error
 }
